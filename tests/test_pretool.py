@@ -4,9 +4,12 @@ Covers:
   - Task 3.7  stdin → API payload transformation
   - Task 3.8  API response → Claude Code stdout transformation
   - Task 3.9  Error paths (timeout, 500, missing env, malformed stdin)
+  - handle_pre_tool_use() stdout output (P0 sanity — handler prints correct JSON)
 """
 
+import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -16,7 +19,8 @@ import pytest
 # ---------------------------------------------------------------------------
 # Path setup — import directly from scripts/lib/unbound.py
 # ---------------------------------------------------------------------------
-_LIB = Path(__file__).parent.parent / "scripts" / "lib"
+_ROOT = Path(__file__).parent.parent
+_LIB = _ROOT / "scripts" / "lib"
 if str(_LIB) not in sys.path:
     sys.path.insert(0, str(_LIB))
 
@@ -25,6 +29,13 @@ from unbound import (
     process_pre_tool_use,
     transform_response_for_claude,
 )
+
+# Load hook-handler.py via importlib (filename contains a hyphen)
+_spec = importlib.util.spec_from_file_location(
+    "hook_handler", _ROOT / "scripts" / "hook-handler.py"
+)
+hh = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(hh)
 
 
 # ---------------------------------------------------------------------------
@@ -218,3 +229,76 @@ class TestErrorPaths:
         stdin = {"session_id": "s", "tool_name": "Bash"}
         # No API key → returns {} without hitting network
         assert process_pre_tool_use(stdin, "") == {}
+
+
+# ---------------------------------------------------------------------------
+# handle_pre_tool_use() — handler stdout output (P0 sanity)
+# Verifies the handler itself prints well-formed JSON with suppressOutput.
+# ---------------------------------------------------------------------------
+
+class TestPreToolUseHandlerOutput:
+
+    PAYLOAD = {"session_id": "s", "tool_name": "Bash", "tool_input": {"command": "ls"}}
+
+    def test_no_api_key_prints_allow_and_suppress(self, capsys):
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ.pop("UNBOUND_CLAUDE_API_KEY", None)
+            hh.handle_pre_tool_use(self.PAYLOAD)
+        out = json.loads(capsys.readouterr().out)
+        assert out["hookSpecificOutput"]["permissionDecision"] == "allow"
+        assert out["suppressOutput"] is True
+
+    def test_api_deny_prints_deny_and_suppress(self, capsys):
+        deny = {
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "deny",
+                "permissionDecisionReason": "Blocked by policy",
+            }
+        }
+        with patch.object(hh, "_call_pretool_api", return_value=deny), \
+             patch.dict(os.environ, {"UNBOUND_CLAUDE_API_KEY": "key"}):
+            hh.handle_pre_tool_use(self.PAYLOAD)
+        out = json.loads(capsys.readouterr().out)
+        assert out["hookSpecificOutput"]["permissionDecision"] == "deny"
+        assert out["suppressOutput"] is True
+
+    def test_api_allow_prints_allow_and_suppress(self, capsys):
+        allow = {
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "allow",
+                "permissionDecisionReason": "",
+            }
+        }
+        with patch.object(hh, "_call_pretool_api", return_value=allow), \
+             patch.dict(os.environ, {"UNBOUND_CLAUDE_API_KEY": "key"}):
+            hh.handle_pre_tool_use(self.PAYLOAD)
+        out = json.loads(capsys.readouterr().out)
+        assert out["hookSpecificOutput"]["permissionDecision"] == "allow"
+        assert out["suppressOutput"] is True
+
+    def test_api_exception_prints_allow_and_suppress(self, capsys):
+        with patch.object(hh, "_call_pretool_api", side_effect=RuntimeError("boom")), \
+             patch.dict(os.environ, {"UNBOUND_CLAUDE_API_KEY": "key"}):
+            hh.handle_pre_tool_use(self.PAYLOAD)
+        out = json.loads(capsys.readouterr().out)
+        assert out["hookSpecificOutput"]["permissionDecision"] == "allow"
+        assert out["suppressOutput"] is True
+
+    def test_empty_api_response_prints_allow_and_suppress(self, capsys):
+        with patch.object(hh, "_call_pretool_api", return_value={}), \
+             patch.dict(os.environ, {"UNBOUND_CLAUDE_API_KEY": "key"}):
+            hh.handle_pre_tool_use(self.PAYLOAD)
+        out = json.loads(capsys.readouterr().out)
+        assert out["hookSpecificOutput"]["permissionDecision"] == "allow"
+        assert out["suppressOutput"] is True
+
+    def test_output_is_always_valid_json(self, capsys):
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ.pop("UNBOUND_CLAUDE_API_KEY", None)
+            hh.handle_pre_tool_use(self.PAYLOAD)
+        raw = capsys.readouterr().out.strip()
+        # Must not raise
+        parsed = json.loads(raw)
+        assert isinstance(parsed, dict)
