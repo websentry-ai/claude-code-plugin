@@ -1,7 +1,7 @@
 {
   "name": "unbound-claude-code",
   "version": "0.1.0",
-  "description": "Unbound AI security and governance plugin for Claude Code. Enforces command policies, guardrails (DLP, NSFW, Jailbreak), and streams analytics to the Unbound dashboard.",
+  "description": "Use Claude Code without fear of data leakage. Unbound enforces command policies, DLP and jailbreak guardrails, and streams session analytics to your security dashboard — all with zero-latency fail-open design.",
   "author": {
     "name": "Unbound Security",
     "url": "https://getunbound.ai"
