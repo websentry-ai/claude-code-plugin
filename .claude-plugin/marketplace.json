@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "unbound-marketplace",
+  "version": "1.0.0",
+  "description": "Unbound AI security and governance plugins for Claude Code",
+  "owner": {
+    "name": "Unbound Security",
+    "email": "support@getunbound.ai"
+  },
+  "plugins": [
+    {
+      "name": "unbound-claude-code",
+      "description": "Security, governance, and analytics for Claude Code — powered by Unbound AI.",
+      "source": ".",
+      "version": "0.1.0",
+      "category": "security"
+    }
+  ]
+}
