@@ -11,7 +11,10 @@
     {
       "name": "unbound-claude-code",
       "description": "Security, governance, and analytics for Claude Code — powered by Unbound AI.",
-      "source": ".",
+      "source": {
+        "source": "github",
+        "repo": "websentry-ai/claude-code-plugin"
+      },
       "version": "0.1.0",
       "category": "security"
     }
