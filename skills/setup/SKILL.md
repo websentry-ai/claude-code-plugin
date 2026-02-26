@@ -105,17 +105,24 @@ Interpret the result:
 
 ## Step 5 — Show success summary
 
-Print a summary like this (adapt to actual values):
+Print a summary like this (adapt `<RC_FILE>` to the actual shell config path from Step 3):
 
 ```
-✓ UNBOUND_CLAUDE_API_KEY saved to ~/.zprofile
+✓ UNBOUND_CLAUDE_API_KEY saved to <RC_FILE>
 ✓ API connectivity verified (HTTP 200)
 ✓ Unbound plugin is active
 
-To apply in your current terminal:
-  source ~/.zprofile
+⚠ IMPORTANT: You must restart this Claude Code session for hooks to use the new key.
+  Claude Code hooks inherit the environment from the parent shell, so the key
+  must be loaded BEFORE starting Claude.
 
-What happens now:
+  Run this single command to reload your shell config and restart Claude Code:
+
+    source <RC_FILE> && claude
+
+  (This sources the key into your terminal, then launches a new Claude session.)
+
+What happens next:
   • Every tool use (Bash, Edit, Write…) is checked against your Unbound policies
   • User prompts are scanned for DLP / NSFW / jailbreak guardrails
   • Session data streams to your Unbound dashboard for analytics
