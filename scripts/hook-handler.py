@@ -69,7 +69,7 @@ def _write_offline(exchange: dict) -> None:
 def _make_log_entry(hook_event_name: str, payload: dict) -> dict:
     """Build a timestamped audit log entry, ensuring hook_event_name is present."""
     return {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         "session_id": payload.get("session_id"),
         "event": {**payload, "hook_event_name": hook_event_name},
     }
