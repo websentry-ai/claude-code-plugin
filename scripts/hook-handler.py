@@ -6,7 +6,6 @@ Phase 2: All hooks fire and return "allow" by default.
 """
 
 import json
-import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,14 +17,17 @@ DEBUG_LOG = LOG_DIR / "debug.jsonl"
 
 def write_debug_log(event: str, payload: dict) -> None:
     """Append a debug entry to ~/.unbound/logs/debug.jsonl."""
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
-    entry = {
-        "ts": datetime.now(timezone.utc).isoformat(),
-        "event": event,
-        "stdin": payload,
-    }
-    with DEBUG_LOG.open("a") as f:
-        f.write(json.dumps(entry) + "\n")
+    try:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        entry = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "event": event,
+            "stdin": payload,
+        }
+        with DEBUG_LOG.open("a") as f:
+            f.write(json.dumps(entry) + "\n")
+    except Exception:
+        pass  # Fail open: logging failure should never break hooks
 
 
 def handle_pre_tool_use(payload: dict) -> None:
