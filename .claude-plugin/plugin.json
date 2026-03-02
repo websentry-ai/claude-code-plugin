@@ -1,0 +1,20 @@
+{
+  "name": "unbound-claude-code",
+  "version": "0.1.0",
+  "description": "Use Claude Code without fear of data leakage. Unbound enforces command policies, DLP and jailbreak guardrails, and streams session analytics to your security dashboard — all with zero-latency fail-open design.",
+  "author": {
+    "name": "Unbound Security",
+    "url": "https://getunbound.ai"
+  },
+  "repository": "https://github.com/websentry-ai/claude-code-plugin",
+  "license": "MIT",
+  "keywords": [
+    "security",
+    "governance",
+    "dlp",
+    "guardrails",
+    "enterprise"
+  ],
+  "hooks": "./hooks/hooks.json",
+  "skills": "./skills/"
+}
