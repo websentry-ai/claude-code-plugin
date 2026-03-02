@@ -2,46 +2,44 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "*",
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/hook-handler.py PreToolUse",
-            "timeout": 10
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/hook-handler.py PreToolUse"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "*",
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/hook-handler.py PostToolUse",
-            "timeout": 60
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/hook-handler.py PostToolUse"
           }
         ]
       }
     ],
     "UserPromptSubmit": [
       {
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/hook-handler.py UserPromptSubmit",
-            "timeout": 60
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/hook-handler.py UserPromptSubmit"
           }
         ]
       }
     ],
     "Stop": [
       {
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/hook-handler.py Stop",
-            "timeout": 60
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/hook-handler.py Stop"
           }
         ]
       }
