@@ -11,6 +11,7 @@ Environment variables:
 """
 
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -59,13 +60,16 @@ def write_debug_log(event: str, payload: dict) -> None:
 
 def _write_offline(exchange: dict) -> None:
     """Write a failed exchange to ~/.unbound/logs/offline-events.jsonl."""
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
-    entry = {
-        "ts": datetime.now(timezone.utc).isoformat(),
-        "exchange": exchange,
-    }
-    with OFFLINE_LOG.open("a") as f:
-        f.write(json.dumps(entry) + "\n")
+    try:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        entry = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "exchange": exchange,
+        }
+        with OFFLINE_LOG.open("a") as f:
+            f.write(json.dumps(entry) + "\n")
+    except Exception:
+        pass  # Fail open: offline logging failure should never break hooks
 
 
 def _make_log_entry(hook_event_name: str, payload: dict) -> dict:

@@ -102,8 +102,9 @@ enterprise/
   managed-settings.json.tmpl   MDM template for fleet enforcement
   README.md                    Enterprise deployment guide
 tests/
-  test_pretool.py          Phase 3 unit tests (29)
-  test_phase4_5.py         Phase 4+5 unit tests (21)
+  test_pretool.py          Phase 3 unit tests
+  test_phase4_5.py         Phase 4+5 unit tests
+  test_sanity.py           Production readiness tests (P0/P1 coverage)
   requirements.txt         pytest
 ```
 
