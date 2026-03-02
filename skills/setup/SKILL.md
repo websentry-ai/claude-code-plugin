@@ -57,12 +57,14 @@ Use this mapping:
 | Linux | bash | `~/.bashrc` |
 | Windows | any | use `setx` (see below) |
 
-**macOS / Linux** — write the export line to the rc file:
+**macOS / Linux** — write the export line to the rc file.
 
+IMPORTANT: The `sed -i` flag syntax differs by OS. Generate the correct command based on the OS detected above:
+- **macOS (BSD sed):** `sed -i '' -e '/^export UNBOUND_CLAUDE_API_KEY=/d' <RC_FILE>`
+- **Linux (GNU sed):** `sed -i -e '/^export UNBOUND_CLAUDE_API_KEY=/d' <RC_FILE>`
+
+Then append the new value:
 ```bash
-# Remove any existing UNBOUND_CLAUDE_API_KEY line first
-sed -i'' -e '/^export UNBOUND_CLAUDE_API_KEY=/d' <RC_FILE>
-# Append new value
 echo 'export UNBOUND_CLAUDE_API_KEY="<KEY>"' >> <RC_FILE>
 ```
 
