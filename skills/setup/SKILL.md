@@ -59,14 +59,17 @@ Use this mapping:
 
 **macOS / Linux** — write the export line to the rc file.
 
-IMPORTANT: The `sed -i` flag syntax differs by OS. Generate the correct command based on the OS detected above:
+IMPORTANT — **Key validation:** Before writing, verify the API key contains only safe characters (alphanumeric, hyphens, underscores, dots). If the key contains single quotes, double quotes, `$`, backticks, or other shell-special characters, warn the user that the key looks malformed and ask them to re-copy it from the dashboard. Unbound API keys are alphanumeric and should never contain shell metacharacters.
+
+IMPORTANT — **`sed -i` portability:** The flag syntax differs by OS. Generate the correct command based on the OS detected above:
 - **macOS (BSD sed):** `sed -i '' -e '/^export UNBOUND_CLAUDE_API_KEY=/d' <RC_FILE>`
 - **Linux (GNU sed):** `sed -i -e '/^export UNBOUND_CLAUDE_API_KEY=/d' <RC_FILE>`
 
-Then append the new value:
+Then append the new value using **single quotes around the key** to prevent shell expansion:
 ```bash
-echo 'export UNBOUND_CLAUDE_API_KEY="<KEY>"' >> <RC_FILE>
+echo 'export UNBOUND_CLAUDE_API_KEY='"'"'<KEY>'"'"'' >> <RC_FILE>
 ```
+This produces: `export UNBOUND_CLAUDE_API_KEY='<KEY>'` in the rc file, which is safe against `$`, backticks, and double quotes.
 
 Replace `<RC_FILE>` with the detected path and `<KEY>` with the user's key.
 
@@ -79,8 +82,9 @@ setx UNBOUND_CLAUDE_API_KEY "<KEY>"
 After writing, export the key into the current shell session so Step 4 works without a restart:
 
 ```bash
-export UNBOUND_CLAUDE_API_KEY="<KEY>"
+export UNBOUND_CLAUDE_API_KEY='<KEY>'
 ```
+(Single quotes prevent shell expansion of any special characters in the key.)
 
 ---
 
