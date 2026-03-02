@@ -8,14 +8,35 @@ import sys
 import json
 import os
 import subprocess
+import time
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 
 UNBOUND_GATEWAY_URL = "https://api.getunbound.ai"
 AUDIT_LOG = Path.home() / ".claude" / "hooks" / "agent-audit.log"
 ERROR_LOG = Path.home() / ".claude" / "hooks" / "error.log"
+DEBUG_LOG = Path.home() / ".unbound" / "logs" / "debug.jsonl"
+
+
+def _log_api_call(endpoint: str, success: bool, latency_ms: float, error: str = ""):
+    """Log API call details (endpoint, success/failure, latency) to debug.jsonl."""
+    try:
+        DEBUG_LOG.parent.mkdir(parents=True, exist_ok=True)
+        entry = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "event": "api_call",
+            "api": endpoint,
+            "success": success,
+            "latency_ms": round(latency_ms, 1),
+        }
+        if error:
+            entry["error"] = error
+        with DEBUG_LOG.open("a") as f:
+            f.write(json.dumps(entry) + "\n")
+    except Exception:
+        pass
 
 
 def log_error(message: str):
@@ -189,27 +210,37 @@ def extract_command_for_pretool(event: Dict) -> str:
 
 def send_to_hook_api(request_body: Dict, api_key: str) -> Dict:
     """Send request to /v1/hooks/pretool endpoint."""
+    endpoint = "/v1/hooks/pretool"
     if not api_key:
         return {}
 
+    t0 = time.monotonic()
     try:
-        url = f"{UNBOUND_GATEWAY_URL}/v1/hooks/pretool"
+        url = f"{UNBOUND_GATEWAY_URL}{endpoint}"
         data = json.dumps(request_body)
 
         result = subprocess.run(
             ["curl", "-fsSL", "-X", "POST",
+             "--connect-timeout", "3", "--max-time", "10",
              "-H", f"Authorization: Bearer {api_key}",
              "-H", "Content-Type: application/json",
              "-d", data, url],
             capture_output=True,
-            timeout=10
+            timeout=12
         )
 
+        latency = (time.monotonic() - t0) * 1000
         if result.returncode == 0 and result.stdout:
-            return json.loads(result.stdout.decode('utf-8'))
+            parsed = json.loads(result.stdout.decode('utf-8'))
+            _log_api_call(endpoint, True, latency)
+            return parsed
+        stderr = result.stderr.decode('utf-8', errors='ignore').strip() if result.stderr else ""
+        _log_api_call(endpoint, False, latency, error=stderr or f"curl exit {result.returncode}")
         return {}
     except Exception as e:
+        latency = (time.monotonic() - t0) * 1000
         log_error(f"Hook API error: {str(e)}")
+        _log_api_call(endpoint, False, latency, error=str(e))
         return {}
 
 
@@ -394,28 +425,37 @@ def build_llm_exchange(events: List[Dict], main_transcript_data: Optional[Dict] 
 
 def send_to_api(exchange: Dict, api_key: str) -> bool:
     """Send exchange data to Unbound API."""
+    endpoint = "/v1/hooks/claude"
     if not api_key:
         log_error("No API key present in send_to_api function")
         return False
 
+    t0 = time.monotonic()
     try:
-        url = f"{UNBOUND_GATEWAY_URL}/v1/hooks/claude"
+        url = f"{UNBOUND_GATEWAY_URL}{endpoint}"
         data = json.dumps(exchange)
 
         result = subprocess.run(
-            ["curl", "-fsSL", "-X", "POST", "-H", f"Authorization: Bearer {api_key}",
+            ["curl", "-fsSL", "-X", "POST",
+             "--connect-timeout", "5", "--max-time", "10",
+             "-H", f"Authorization: Bearer {api_key}",
              "-H", "Content-Type: application/json", "-d", data, url],
             capture_output=True,
-            timeout=10
+            timeout=15
         )
 
+        latency = (time.monotonic() - t0) * 1000
         if result.returncode != 0:
             error_msg = result.stderr.decode('utf-8', errors='ignore').strip() if result.stderr else "Unknown error"
             log_error(f"API request failed: {error_msg}")
+            _log_api_call(endpoint, False, latency, error=error_msg)
             return False
+        _log_api_call(endpoint, True, latency)
         return True
     except Exception as e:
+        latency = (time.monotonic() - t0) * 1000
         log_error(f"Exception in send_to_api: {str(e)}")
+        _log_api_call(endpoint, False, latency, error=str(e))
         return False
 
 
