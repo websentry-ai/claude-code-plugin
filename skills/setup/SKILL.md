@@ -49,8 +49,17 @@ The script prints progress messages to stdout. Check the exit code:
 The setup script wrote the key to the RC file but it is not yet available in this shell session. Source the RC file so the connectivity check can use it:
 
 ```bash
-source "$(python3 -c "import os,platform; s=os.environ.get('SHELL',''); print(os.path.expanduser('~/.zprofile') if platform.system()=='Darwin' and 'zsh' in s else '~/.bash_profile' if platform.system()=='Darwin' else '~/.zshrc' if 'zsh' in s else '~/.bashrc')")"
+source <RC_FILE>
 ```
+
+Use the same RC file the setup script reported (shown in its "Setup Complete!" output). The mapping is:
+
+| OS | Shell | RC file |
+|---|---|---|
+| macOS | zsh | `~/.zprofile` |
+| macOS | bash | `~/.bash_profile` |
+| Linux | zsh | `~/.zshrc` |
+| Linux | bash | `~/.bashrc` |
 
 ---
 
