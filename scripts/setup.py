@@ -9,14 +9,12 @@ import subprocess
 import urllib.request
 import urllib.error
 import urllib.parse
-import json
 from pathlib import Path
 from typing import Tuple, Optional, Dict
 import argparse
 import threading
 import http.server
 import socketserver
-import socket
 import webbrowser
 
 
@@ -141,14 +139,11 @@ def set_env_var_on_unix(var_name: str, value: str) -> bool:
         return False
 
     debug_print(f"Writing to shell file: {rc_file}")
-    export_line = f'export {var_name}="{value}"'
+    export_line = f"export {var_name}='{value}'"
 
     was_added = append_to_file(rc_file, export_line)
 
-    if was_added:
-        return True
-    else:
-        return True
+    return was_added
 
 
 def set_env_var(var_name: str, value: str) -> Tuple[bool, str]:
@@ -245,42 +240,6 @@ def remove_env_var(var_name: str) -> Tuple[bool, str]:
         return False, f"Unsupported OS: {system}"
 
 
-def setup_claude_key_helper() -> None:
-    """
-    Create ~/.claude/anthropic_key.sh that echoes UNBOUND_API_KEY and
-    update ~/.claude/settings.json with apiKeyHelper pointing to that script.
-    """
-    claude_dir = Path.home() / ".claude"
-    settings_path = claude_dir / "settings.json"
-    key_helper_path = claude_dir / "anthropic_key.sh"
-
-    try:
-        claude_dir.mkdir(parents=True, exist_ok=True)
-
-        # Write anthropic_key.sh
-        key_helper_path.write_text("echo $UNBOUND_API_KEY", encoding="utf-8")
-        try:
-            current_mode = key_helper_path.stat().st_mode
-            os.chmod(key_helper_path, current_mode | 0o111)
-        except Exception:
-            pass
-
-        # Read existing settings.json if present
-        settings: Dict[str, any] = {}
-        if settings_path.exists():
-            try:
-                settings = json.loads(settings_path.read_text(encoding="utf-8")) or {}
-            except Exception:
-                settings = {}
-
-        # Update apiKeyHelper
-        settings["apiKeyHelper"] = "~/.claude/anthropic_key.sh"
-
-        settings_path.write_text(json.dumps(settings, indent=2), encoding="utf-8")
-    except Exception as e:
-        print(f"Failed to configure Claude Code key helper: {e}")
-
-
 def run_one_shot_callback_server(frontend_url: str) -> Optional[Dict[str, any]]:
     """
     Start a local HTTP server that waits for a single callback request and returns its contents.
@@ -326,13 +285,10 @@ def run_one_shot_callback_server(frontend_url: str) -> Optional[Dict[str, any]]:
             return
 
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(("127.0.0.1", 0))
-            host, port = s.getsockname()
-        callback_url = f"http://127.0.0.1:{port}/callback"
-
-        httpd = socketserver.TCPServer(("127.0.0.1", port), CallbackHandler)
+        httpd = socketserver.TCPServer(("127.0.0.1", 0), CallbackHandler)
         httpd.allow_reuse_address = True
+        _, port = httpd.server_address
+        callback_url = f"http://127.0.0.1:{port}/callback"
 
         thread = threading.Thread(target=httpd.serve_forever, daemon=True)
         thread.start()
@@ -346,7 +302,9 @@ def run_one_shot_callback_server(frontend_url: str) -> Optional[Dict[str, any]]:
         print("Waiting for authentication...")
 
         try:
-            done_evt.wait()
+            if not done_evt.wait(timeout=300):
+                print("\nTimed out waiting for browser authentication (5 minutes).")
+                return None
         finally:
             try:
                 httpd.shutdown()
@@ -358,36 +316,6 @@ def run_one_shot_callback_server(frontend_url: str) -> Optional[Dict[str, any]]:
     except Exception as e:
         print(f"Failed to run callback server: {e}")
         return None
-
-
-def remove_claude_key_helper() -> None:
-    """Remove the apiKeyHelper script and setting from Claude config."""
-    claude_dir = Path.home() / ".claude"
-    key_helper_path = claude_dir / "anthropic_key.sh"
-    settings_path = claude_dir / "settings.json"
-
-    # Remove the key helper script
-    if key_helper_path.exists():
-        try:
-            key_helper_path.unlink()
-            debug_print(f"Removed {key_helper_path}")
-            print(f"Removed {key_helper_path}")
-        except Exception as e:
-            print(f"Failed to remove {key_helper_path}: {e}")
-
-    # Remove apiKeyHelper from settings.json
-    if settings_path.exists():
-        try:
-            with open(settings_path, "r", encoding="utf-8") as f:
-                settings = json.load(f)
-            if "apiKeyHelper" in settings:
-                del settings["apiKeyHelper"]
-                with open(settings_path, "w", encoding="utf-8") as f:
-                    json.dump(settings, f, indent=2)
-                debug_print("Removed apiKeyHelper from settings.json")
-                print("Removed apiKeyHelper from settings.json")
-        except Exception as e:
-            print(f"Failed to update settings.json: {e}")
 
 
 def clear_setup() -> None:
