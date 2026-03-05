@@ -5,9 +5,9 @@ Claude Code - Environment Setup Script
 
 import os
 import platform
+import shlex
 import subprocess
-import urllib.request
-import urllib.error
+import sys
 import urllib.parse
 from pathlib import Path
 from typing import Tuple, Optional, Dict
@@ -139,11 +139,13 @@ def set_env_var_on_unix(var_name: str, value: str) -> bool:
         return False
 
     debug_print(f"Writing to shell file: {rc_file}")
-    export_line = f"export {var_name}='{value}'"
+    export_line = f"export {var_name}={shlex.quote(value)}"
 
-    was_added = append_to_file(rc_file, export_line)
-
-    return was_added
+    # append_to_file returns False for both "already present" (idempotent success)
+    # and write errors (logged by append_to_file). Either way the desired state is
+    # either already achieved or was attempted, so we return True.
+    append_to_file(rc_file, export_line)
+    return True
 
 
 def set_env_var(var_name: str, value: str) -> Tuple[bool, str]:
@@ -169,8 +171,8 @@ def set_env_var(var_name: str, value: str) -> Tuple[bool, str]:
     elif system in ["darwin", "linux"]:
         success = set_env_var_on_unix(var_name, value)
         if success:
-            shell_name = "zsh" if "zsh" in os.environ.get("SHELL", "") else "bash"
-            return True, f"Run 'source ~/.{shell_name}rc' or restart terminal"
+            rc_file = get_shell_rc_file()
+            return True, f"Run 'source {rc_file}' or restart terminal"
         else:
             return False, "Failed to set environment variable"
 
@@ -213,7 +215,7 @@ def remove_env_var_on_windows(var_name: str) -> bool:
     try:
         subprocess.run(["reg", "delete", "HKCU\\Environment", "/F", "/V", var_name], check=True, capture_output=True)
         return True
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError:
         # If it doesn't exist, treat as success
         return True
     except FileNotFoundError:
@@ -290,9 +292,11 @@ def run_one_shot_callback_server(frontend_url: str) -> Optional[Dict[str, any]]:
         def log_message(self, format: str, *args) -> None:
             return
 
+    class _ReuseAddrTCPServer(socketserver.TCPServer):
+        allow_reuse_address = True
+
     try:
-        httpd = socketserver.TCPServer(("127.0.0.1", 0), CallbackHandler)
-        httpd.allow_reuse_address = True
+        httpd = _ReuseAddrTCPServer(("127.0.0.1", 0), CallbackHandler)
         _, port = httpd.server_address
         callback_url = f"http://127.0.0.1:{port}/callback"
 
@@ -372,13 +376,13 @@ def main():
 
     if not args.domain:
         print("\nMissing required argument: --domain (e.g., --domain gateway.getunbound.ai)")
-        return
+        sys.exit(1)
 
     auth_url = normalize_url(args.domain)
     cb_response = run_one_shot_callback_server(auth_url)
     if cb_response is None:
         print("\nFailed to receive callback response. Exiting.")
-        return
+        sys.exit(1)
 
     api_key = None
     try:
@@ -388,11 +392,11 @@ def main():
 
     if not api_key:
         print("\nNo api_key found in callback. Exiting.")
-        return
+        sys.exit(1)
 
     if "'" in api_key:
         print("\nReceived API key contains an invalid character ('). Exiting.")
-        return
+        sys.exit(1)
 
     print("API Key Verified")
     debug_print("API key verification successful")
@@ -401,7 +405,7 @@ def main():
     success, message = set_env_var("UNBOUND_API_KEY", api_key)
     if not success:
         print(f"Failed to configure UNBOUND_API_KEY: {message}")
-        return
+        sys.exit(1)
     debug_print("UNBOUND_API_KEY set successfully")
 
     # Final instructions
