@@ -41,7 +41,7 @@ def _log_api_call(endpoint: str, success: bool, latency_ms: float, error: str = 
 
 def log_error(message: str):
     """Log error with timestamp to error.log, keeping only last 25 errors."""
-    timestamp = datetime.utcnow().isoformat() + 'Z'
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f") + 'Z'
     error_entry = f"{timestamp}: {message}\n"
 
     try:
@@ -395,13 +395,6 @@ def build_llm_exchange(events: List[Dict], main_transcript_data: Optional[Dict] 
         if assistant_tool_uses:
             assistant_msg['tool_use'] = assistant_tool_uses
 
-        messages.append(assistant_msg)
-    elif user_prompt and assistant_tool_uses:
-        assistant_msg = {
-            'role': 'assistant',
-            'content': "",
-            'tool_use': assistant_tool_uses
-        }
         messages.append(assistant_msg)
 
     if len(messages) == 1 and messages[0]['role'] == 'user':
