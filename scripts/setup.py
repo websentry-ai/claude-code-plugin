@@ -364,6 +364,10 @@ def main():
         clear_setup()
         return
 
+    if not args.domain:
+        print("\nMissing required argument: --domain (e.g., --domain gateway.getunbound.ai)")
+        sys.exit(1)
+
     print("=" * 60)
     print("Claude Code - Environment Setup")
     print("=" * 60)
@@ -373,10 +377,6 @@ def main():
         remove_env_var("UNBOUND_API_KEY")
     except Exception:
         pass
-
-    if not args.domain:
-        print("\nMissing required argument: --domain (e.g., --domain gateway.getunbound.ai)")
-        sys.exit(1)
 
     auth_url = normalize_url(args.domain)
     cb_response = run_one_shot_callback_server(auth_url)
