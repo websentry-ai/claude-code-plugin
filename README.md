@@ -1,23 +1,12 @@
-# Unbound Claude Code Plugin
+# Unbound — Security & Governance for Claude Code
 
-Security, governance, and analytics for [Claude Code](https://claude.ai/code) — powered by [Unbound AI](https://getunbound.ai).
+Real-time policy enforcement, DLP guardrails, and session analytics for [Claude Code](https://claude.ai/code) — powered by [Unbound AI](https://getunbound.ai).
 
-## What it does
+## Why Unbound?
 
-This plugin connects Claude Code to the Unbound AI platform:
+Engineering teams adopting Claude Code face real risks: sensitive data pasted into prompts, dangerous commands executed without oversight, and zero visibility into what's happening across sessions. Unbound solves this by sitting between your developers and Claude Code — enforcing security policies in real time and streaming every session to a central dashboard. No workflow disruption, no developer friction.
 
-| Hook | What it enforces |
-|---|---|
-| **PreToolUse** | Command policy — block or warn on dangerous tool invocations |
-| **UserPromptSubmit** | Guardrails — DLP, NSFW, and jailbreak detection on user prompts |
-| **PostToolUse** | Audit logging — streams tool usage to the Unbound dashboard |
-| **Stop** | Session analytics — sends the full conversation exchange on session end |
-
-All hooks **fail open**: if the API is unreachable or the key is missing, Claude Code continues normally.
-
----
-
-## Self-serve install
+## Quick Start
 
 ### Step 1 — Install the plugin
 
@@ -39,92 +28,61 @@ Open Claude Code and run:
 /unbound:setup
 ```
 
-The skill guides you through getting an API key, persisting it to your shell profile, and verifying connectivity. Takes under 5 minutes.
+The setup skill walks you through getting an API key, persisting it to your shell profile, and verifying connectivity. Takes under 5 minutes.
 
-### Step 3 — Verify
+### Step 3 — Verify on your dashboard
 
-After setup, any tool invocation is checked against your Unbound policies. Test with:
+After setup, every tool invocation is checked against your Unbound policies. Test with:
 
-- **Block policy**: create a BLOCK rule in your Unbound dashboard → try running `rm -rf /` → should be blocked
-- **DLP guardrail**: enable DLP → type a prompt containing an SSN → should be blocked
-- **Analytics**: run any command → check your Unbound dashboard for the event
+- **Command policy**: create a BLOCK rule in your Unbound dashboard, then try running the blocked command — it should be rejected
+- **DLP guardrail**: enable DLP, then type a prompt containing an SSN — it should be blocked
+- **Analytics**: run any command, then check your Unbound dashboard for the event
 
----
+## What Gets Enforced
 
-## Enterprise (MDM) install
+| Capability | What it does |
+|---|---|
+| **Command policies** | Block or warn on dangerous tool invocations before they execute |
+| **Prompt guardrails** | DLP, NSFW, and jailbreak detection on every user prompt |
+| **Audit logging** | Streams tool usage to the Unbound dashboard in real time |
+| **Session analytics** | Sends the full conversation exchange when a session ends |
 
-For fleet deployment where users cannot disable the plugin, see [`enterprise/README.md`](enterprise/README.md).
+## Fail-Open Design
 
-The short version:
+The plugin never blocks your workflow if the Unbound API is unreachable or the key is missing. All hooks fail open — Claude Code continues working normally, and queued events are replayed when connectivity resumes.
 
-1. Copy `enterprise/managed-settings.json.tmpl` to the system-wide Claude Code path as `managed-settings.json`
-2. Provision `UNBOUND_CLAUDE_API_KEY` per device via your MDM
+## Enterprise Deployment
 
----
+For fleet deployment where end users cannot disable the plugin, see the [enterprise deployment guide](enterprise/README.md). In short: drop a managed settings file via your MDM and provision `UNBOUND_CLAUDE_API_KEY` per device.
 
 ## Configuration
 
-The plugin reads one environment variable:
-
 | Variable | Description |
 |---|---|
-| `UNBOUND_CLAUDE_API_KEY` | Bearer token for the Unbound API. Get one at https://app.getunbound.ai → Settings → API Keys |
-
----
+| `UNBOUND_CLAUDE_API_KEY` | Bearer token for the Unbound API. Get one at [app.getunbound.ai](https://app.getunbound.ai) → Settings → API Keys |
 
 ## Logs
 
 | Path | Contents |
 |---|---|
 | `~/.unbound/logs/debug.jsonl` | Raw stdin from every hook event (for debugging) |
-| `~/.claude/hooks/agent-audit.log` | Per-session audit trail (UserPromptSubmit, PostToolUse) |
+| `~/.claude/hooks/agent-audit.log` | Per-session audit trail |
+| `~/.unbound/logs/offline-events.jsonl` | Events that failed to send (replayed on reconnect) |
 | `~/.claude/hooks/error.log` | API errors (last 25 entries) |
-| `~/.unbound/logs/offline-events.jsonl` | Exchanges that failed to send (replayed on reconnect) |
 
----
+## Troubleshooting
 
-## Project structure
+**Plugin not loading**
+Run `claude plugin list` and confirm `unbound-claude-code` appears. If not, re-install with `claude plugin install --path .` from the repo root.
 
-```
-.claude-plugin/
-  plugin.json              Plugin manifest
-  marketplace.json         Marketplace catalog
-hooks/
-  hooks.json               Hook event configuration
-scripts/
-  hook-handler.py          Central hook dispatcher (Phases 3–5)
-  lib/
-    unbound.py             Unbound API helpers (copied from websentry-ai/setup)
-skills/
-  setup/
-    SKILL.md               /unbound:setup self-serve onboarding skill
-enterprise/
-  managed-settings.json.tmpl   MDM template for fleet enforcement
-  README.md                    Enterprise deployment guide
-tests/
-  test_pretool.py          Phase 3 unit tests
-  test_phase4_5.py         Phase 4+5 unit tests
-  test_sanity.py           Production readiness tests (P0/P1 coverage)
-  requirements.txt         pytest
-```
+**API key not set**
+Run `/unbound:setup` again — it will detect the missing key and guide you through setup. You can also set `UNBOUND_CLAUDE_API_KEY` manually in your shell profile.
 
----
+**Command blocked unexpectedly**
+Check your policy rules at [app.getunbound.ai](https://app.getunbound.ai). The block response includes a reason — review it to confirm the rule that triggered.
 
-## Development
-
-```bash
-# Run all tests
-pip install pytest
-python3 -m pytest tests/ -v
-
-# Validate plugin
-claude plugin validate .
-
-# Install locally
-claude plugin install --path .
-```
-
----
+**Events not appearing on dashboard**
+Verify your API key is valid and the Unbound API is reachable. Check `~/.claude/hooks/error.log` for details. Offline events are stored in `~/.unbound/logs/offline-events.jsonl` and replayed automatically.
 
 ## License
 
