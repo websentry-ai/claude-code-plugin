@@ -21,7 +21,7 @@ echo "${UNBOUND_API_KEY:0:8}..."
 **If the variable is unset or empty**, proceed to Step 2.
 
 **If the variable is already set**, tell the user the key is configured (show only the first 8 characters + `...`). Ask them to choose:
-1. **Verify** — test connectivity with the existing key (jump to Step 3)
+1. **Verify** — test connectivity with the existing key (jump to Step 4)
 2. **Reconfigure** — replace with a new key (proceed to Step 2)
 3. **Exit** — nothing to do
 
@@ -44,7 +44,17 @@ The script prints progress messages to stdout. Check the exit code:
 
 ---
 
-## Step 3 — Verify connectivity
+## Step 3 — Load the new key into the current shell
+
+The setup script wrote the key to the RC file but it is not yet available in this shell session. Source the RC file so the connectivity check can use it:
+
+```bash
+source "$(python3 -c "import os,platform; s=os.environ.get('SHELL',''); print(os.path.expanduser('~/.zprofile') if platform.system()=='Darwin' and 'zsh' in s else '~/.bash_profile' if platform.system()=='Darwin' else '~/.zshrc' if 'zsh' in s else '~/.bashrc')")"
+```
+
+---
+
+## Step 4 — Verify connectivity
 
 Run:
 
@@ -58,14 +68,14 @@ Interpret the result:
 
 | HTTP code | Meaning | Action |
 |---|---|---|
-| `200` | Key is valid and API is reachable | Proceed to Step 4 |
+| `200` | Key is valid and API is reachable | Proceed to Step 5 |
 | `401` | Key is invalid or expired | Tell the user the key was rejected. Offer to retry from Step 2. |
 | `403` | Key exists but lacks Claude Code scope | Tell the user to create a new key with Claude Code scope. |
-| anything else / curl error | Network issue or API unreachable | Warn the user. The plugin will **fail open** (allow all) until connectivity is restored. Still proceed to Step 4. |
+| anything else / curl error | Network issue or API unreachable | Warn the user. The plugin will **fail open** (allow all) until connectivity is restored. Still proceed to Step 5. |
 
 ---
 
-## Step 4 — Show success summary
+## Step 5 — Show success summary
 
 Print a summary like this (adapt `<RC_FILE>` to the actual RC file for the user's shell):
 
