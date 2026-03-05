@@ -63,7 +63,7 @@ class TestUserPromptTransformation:
     def test_prompt_sent_as_user_message(self, mock_run):
         mock_run.return_value = _api_ok("allow")
         with patch.object(hh, "_audit_log"):
-            with patch.dict("os.environ", {"UNBOUND_CLAUDE_API_KEY": "key"}):
+            with patch.dict("os.environ", {"UNBOUND_API_KEY": "key"}):
                 hh.handle_user_prompt_submit(
                     {"session_id": "s1", "prompt": "hello world"}
                 )
@@ -76,7 +76,7 @@ class TestUserPromptTransformation:
     def test_session_id_as_conversation_id(self, mock_run):
         mock_run.return_value = _api_ok("allow")
         with patch.object(hh, "_audit_log"):
-            with patch.dict("os.environ", {"UNBOUND_CLAUDE_API_KEY": "key"}):
+            with patch.dict("os.environ", {"UNBOUND_API_KEY": "key"}):
                 hh.handle_user_prompt_submit(
                     {"session_id": "my-session", "prompt": "test"}
                 )
@@ -92,7 +92,7 @@ class TestUserPromptResponse:
     @patch("subprocess.run")
     def test_deny_outputs_block_decision(self, mock_run, capsys):
         mock_run.return_value = _api_ok("deny", "PII detected")
-        with patch.dict("os.environ", {"UNBOUND_CLAUDE_API_KEY": "key"}):
+        with patch.dict("os.environ", {"UNBOUND_API_KEY": "key"}):
             hh.handle_user_prompt_submit({"session_id": "s", "prompt": "my SSN is 123"})
         out = json.loads(capsys.readouterr().out)
         assert out["decision"] == "block"
@@ -103,7 +103,7 @@ class TestUserPromptResponse:
     def test_allow_produces_no_output(self, mock_run, capsys):
         mock_run.return_value = _api_ok("allow")
         with patch.object(hh, "_audit_log"):
-            with patch.dict("os.environ", {"UNBOUND_CLAUDE_API_KEY": "key"}):
+            with patch.dict("os.environ", {"UNBOUND_API_KEY": "key"}):
                 hh.handle_user_prompt_submit({"session_id": "s", "prompt": "clean prompt"})
         assert capsys.readouterr().out == ""
 
@@ -111,7 +111,7 @@ class TestUserPromptResponse:
     def test_blocked_prompt_is_not_logged(self, mock_run):
         mock_run.return_value = _api_ok("deny", "blocked")
         with patch.object(hh, "_audit_log") as mock_log:
-            with patch.dict("os.environ", {"UNBOUND_CLAUDE_API_KEY": "key"}):
+            with patch.dict("os.environ", {"UNBOUND_API_KEY": "key"}):
                 hh.handle_user_prompt_submit({"session_id": "s", "prompt": "bad prompt"})
         mock_log.assert_not_called()
 
@@ -119,7 +119,7 @@ class TestUserPromptResponse:
     def test_allowed_prompt_is_logged(self, mock_run):
         mock_run.return_value = _api_ok("allow")
         with patch.object(hh, "_audit_log") as mock_log:
-            with patch.dict("os.environ", {"UNBOUND_CLAUDE_API_KEY": "key"}):
+            with patch.dict("os.environ", {"UNBOUND_API_KEY": "key"}):
                 hh.handle_user_prompt_submit({"session_id": "s", "prompt": "good prompt"})
         mock_log.assert_called_once()
         log_entry = mock_log.call_args[0][0]
@@ -134,7 +134,7 @@ class TestUserPromptErrorPaths:
         with patch.object(hh, "_audit_log") as mock_log:
             with patch.dict("os.environ", {}, clear=True):
                 # Ensure key is absent
-                os.environ.pop("UNBOUND_CLAUDE_API_KEY", None)
+                os.environ.pop("UNBOUND_API_KEY", None)
                 hh.handle_user_prompt_submit({"session_id": "s", "prompt": "hi"})
         assert capsys.readouterr().out == ""
         mock_log.assert_called_once()  # still logs the prompt
@@ -143,7 +143,7 @@ class TestUserPromptErrorPaths:
     def test_api_500_allows_and_logs(self, mock_run, capsys):
         mock_run.return_value = _api_fail()
         with patch.object(hh, "_audit_log") as mock_log:
-            with patch.dict("os.environ", {"UNBOUND_CLAUDE_API_KEY": "key"}):
+            with patch.dict("os.environ", {"UNBOUND_API_KEY": "key"}):
                 hh.handle_user_prompt_submit({"session_id": "s", "prompt": "hi"})
         assert capsys.readouterr().out == ""
         mock_log.assert_called_once()
@@ -151,7 +151,7 @@ class TestUserPromptErrorPaths:
     @patch("subprocess.run", side_effect=Exception("timeout"))
     def test_timeout_allows_and_logs(self, mock_run, capsys):
         with patch.object(hh, "_audit_log") as mock_log:
-            with patch.dict("os.environ", {"UNBOUND_CLAUDE_API_KEY": "key"}):
+            with patch.dict("os.environ", {"UNBOUND_API_KEY": "key"}):
                 hh.handle_user_prompt_submit({"session_id": "s", "prompt": "hi"})
         assert capsys.readouterr().out == ""
         mock_log.assert_called_once()
@@ -160,7 +160,7 @@ class TestUserPromptErrorPaths:
     def test_malformed_api_json_allows_and_logs(self, mock_run, capsys):
         mock_run.return_value = MagicMock(returncode=0, stdout=b"{{not json}}")
         with patch.object(hh, "_audit_log") as mock_log:
-            with patch.dict("os.environ", {"UNBOUND_CLAUDE_API_KEY": "key"}):
+            with patch.dict("os.environ", {"UNBOUND_API_KEY": "key"}):
                 hh.handle_user_prompt_submit({"session_id": "s", "prompt": "hi"})
         assert capsys.readouterr().out == ""
         mock_log.assert_called_once()
@@ -222,7 +222,7 @@ class TestStop:
         with patch.object(hh, "_audit_log") as mock_log, \
              patch.object(hh, "_load_logs", return_value=[]), \
              patch.dict("os.environ", {}, clear=True):
-            os.environ.pop("UNBOUND_CLAUDE_API_KEY", None)
+            os.environ.pop("UNBOUND_API_KEY", None)
             hh.handle_stop(self._PAYLOAD)
         mock_log.assert_called_once()
         entry = mock_log.call_args[0][0]
@@ -232,7 +232,7 @@ class TestStop:
         with patch.object(hh, "_audit_log"), \
              patch.object(hh, "_send_exchange") as mock_send, \
              patch.dict("os.environ", {}, clear=True):
-            os.environ.pop("UNBOUND_CLAUDE_API_KEY", None)
+            os.environ.pop("UNBOUND_API_KEY", None)
             hh.handle_stop(self._PAYLOAD)
         mock_send.assert_not_called()
 
@@ -255,7 +255,7 @@ class TestStop:
              patch.object(hh, "_send_exchange", return_value=True) as mock_send, \
              patch.object(hh, "_save_logs") as mock_save, \
              patch.object(hh, "_cleanup_logs"), \
-             patch.dict("os.environ", {"UNBOUND_CLAUDE_API_KEY": "key"}):
+             patch.dict("os.environ", {"UNBOUND_API_KEY": "key"}):
             hh.handle_stop(self._PAYLOAD)
 
         mock_send.assert_called_once_with(exchange, "key")
@@ -275,7 +275,7 @@ class TestStop:
              patch.object(hh, "_cleanup_logs"), \
              patch.object(hh, "OFFLINE_LOG", offline_file), \
              patch.object(hh, "LOG_DIR", tmp_path), \
-             patch.dict("os.environ", {"UNBOUND_CLAUDE_API_KEY": "key"}):
+             patch.dict("os.environ", {"UNBOUND_API_KEY": "key"}):
             hh.handle_stop(self._PAYLOAD)
 
         assert offline_file.exists()
@@ -288,7 +288,7 @@ class TestStop:
              patch.object(hh, "_build_exchange", return_value=None), \
              patch.object(hh, "_send_exchange") as mock_send, \
              patch.object(hh, "_cleanup_logs"), \
-             patch.dict("os.environ", {"UNBOUND_CLAUDE_API_KEY": "key"}):
+             patch.dict("os.environ", {"UNBOUND_API_KEY": "key"}):
             hh.handle_stop(self._PAYLOAD)
         mock_send.assert_not_called()
 
@@ -296,7 +296,7 @@ class TestStop:
         """Stop must never raise — it's a non-blocking async hook."""
         with patch.object(hh, "_audit_log"), \
              patch.object(hh, "_load_logs", side_effect=RuntimeError("disk full")), \
-             patch.dict("os.environ", {"UNBOUND_CLAUDE_API_KEY": "key"}):
+             patch.dict("os.environ", {"UNBOUND_API_KEY": "key"}):
             hh.handle_stop(self._PAYLOAD)  # should not raise
 
 

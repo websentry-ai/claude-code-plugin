@@ -278,7 +278,7 @@ class TestStopSessionFiltering:
              patch.object(hh, "_send_exchange", return_value=True), \
              patch.object(hh, "_save_logs"), \
              patch.object(hh, "_cleanup_logs"), \
-             patch.dict(os.environ, {"UNBOUND_CLAUDE_API_KEY": "key"}):
+             patch.dict(os.environ, {"UNBOUND_API_KEY": "key"}):
             hh.handle_stop(self._PAYLOAD)
         events = mock_build.call_args[0][0]
         assert len(events) == 2
@@ -296,7 +296,7 @@ class TestStopSessionFiltering:
              patch.object(hh, "_send_exchange", return_value=True), \
              patch.object(hh, "_save_logs"), \
              patch.object(hh, "_cleanup_logs"), \
-             patch.dict(os.environ, {"UNBOUND_CLAUDE_API_KEY": "key"}):
+             patch.dict(os.environ, {"UNBOUND_API_KEY": "key"}):
             hh.handle_stop(self._PAYLOAD)
         events = mock_build.call_args[0][0]
         assert all(e["session_id"] == "s1" for e in events)
@@ -307,7 +307,7 @@ class TestStopSessionFiltering:
              patch.object(hh, "_load_logs", return_value=logs), \
              patch.object(hh, "_send_exchange") as mock_send, \
              patch.object(hh, "_cleanup_logs"), \
-             patch.dict(os.environ, {"UNBOUND_CLAUDE_API_KEY": "key"}):
+             patch.dict(os.environ, {"UNBOUND_API_KEY": "key"}):
             hh.handle_stop(self._PAYLOAD)
         mock_send.assert_not_called()
 
@@ -318,7 +318,7 @@ class TestStopSessionFiltering:
              patch.object(hh, "_parse_transcript") as mock_parse, \
              patch.object(hh, "_build_exchange", return_value=None), \
              patch.object(hh, "_cleanup_logs"), \
-             patch.dict(os.environ, {"UNBOUND_CLAUDE_API_KEY": "key"}):
+             patch.dict(os.environ, {"UNBOUND_API_KEY": "key"}):
             hh.handle_stop({"session_id": "s1", "transcript_path": "undefined"})
         mock_parse.assert_not_called()
 
@@ -331,7 +331,7 @@ class TestStopSessionFiltering:
              patch.object(hh, "_parse_transcript", return_value={}) as mock_parse, \
              patch.object(hh, "_build_exchange", return_value=None), \
              patch.object(hh, "_cleanup_logs"), \
-             patch.dict(os.environ, {"UNBOUND_CLAUDE_API_KEY": "key"}):
+             patch.dict(os.environ, {"UNBOUND_API_KEY": "key"}):
             hh.handle_stop({"session_id": "s1", "transcript_path": str(transcript)})
         mock_parse.assert_called_once()
 
@@ -348,7 +348,7 @@ class TestStopSessionFiltering:
              patch.object(hh, "_send_exchange", return_value=True), \
              patch.object(hh, "_save_logs") as mock_save, \
              patch.object(hh, "_cleanup_logs"), \
-             patch.dict(os.environ, {"UNBOUND_CLAUDE_API_KEY": "key"}):
+             patch.dict(os.environ, {"UNBOUND_API_KEY": "key"}):
             hh.handle_stop(self._PAYLOAD)
         remaining = mock_save.call_args[0][0]
         assert len(remaining) == 1

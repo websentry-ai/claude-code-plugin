@@ -34,9 +34,9 @@ mkdir -p /etc/claude-code
 cp managed-settings.json.tmpl /etc/claude-code/managed-settings.json
 ```
 
-### 2. Set UNBOUND_CLAUDE_API_KEY for each user
+### 2. Set UNBOUND_API_KEY for each user
 
-The plugin reads `UNBOUND_CLAUDE_API_KEY` from the environment. This must be set per user (not in managed-settings.json, which does not support env vars).
+The plugin reads `UNBOUND_API_KEY` from the environment. This must be set per user (not in managed-settings.json, which does not support env vars).
 
 **Option A — MDM-issued device API key (recommended)**
 
@@ -56,7 +56,7 @@ Set a single key for all users via a login script or MDM configuration profile:
 
 ```bash
 # /etc/profile.d/unbound.sh  (Linux)
-export UNBOUND_CLAUDE_API_KEY="<YOUR_KEY>"
+export UNBOUND_API_KEY="<YOUR_KEY>"
 ```
 
 macOS: deploy a Configuration Profile (`.mobileconfig`) that sets the env var, or add the export to `/etc/zshenv`.
@@ -66,7 +66,7 @@ macOS: deploy a Configuration Profile (`.mobileconfig`) that sets the env var, o
 On an enrolled machine, open Claude Code and run `/unbound:setup`. It should report:
 
 ```
-✓ UNBOUND_CLAUDE_API_KEY saved ...
+✓ UNBOUND_API_KEY saved ...
 ✓ API connectivity verified (HTTP 200)
 ✓ Unbound plugin is active
 ```
