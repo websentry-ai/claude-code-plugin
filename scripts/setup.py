@@ -261,6 +261,9 @@ def run_one_shot_callback_server(frontend_url: str) -> Optional[Dict[str, any]]:
 
         def do_GET(self) -> None:
             parsed = urllib.parse.urlparse(self.path)
+            if parsed.path != "/callback":
+                self._finish(404, b"Not found")
+                return
             result["method"] = "GET"
             result["path"] = self.path
             result["query"] = dict(urllib.parse.parse_qsl(parsed.query))
@@ -273,6 +276,9 @@ def run_one_shot_callback_server(frontend_url: str) -> Optional[Dict[str, any]]:
             length = int(self.headers.get("Content-Length", "0") or 0)
             body = self.rfile.read(length) if length > 0 else b""
             parsed = urllib.parse.urlparse(self.path)
+            if parsed.path != "/callback":
+                self._finish(404, b"Not found")
+                return
             result["method"] = "POST"
             result["path"] = self.path
             result["query"] = dict(urllib.parse.parse_qsl(parsed.query))
@@ -382,6 +388,10 @@ def main():
 
     if not api_key:
         print("\nNo api_key found in callback. Exiting.")
+        return
+
+    if "'" in api_key:
+        print("\nReceived API key contains an invalid character ('). Exiting.")
         return
 
     print("API Key Verified")

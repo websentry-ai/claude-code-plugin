@@ -29,7 +29,7 @@ echo "${UNBOUND_API_KEY:0:8}..."
 
 ## Step 2 — Authenticate via browser
 
-Run the setup script — it handles everything (local callback server, browser auth, key persistence to RC files, Claude Code apiKeyHelper configuration):
+Run the setup script — it handles everything (local callback server, browser auth, key persistence to RC file):
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/setup.py" --domain gateway.getunbound.ai
@@ -37,10 +37,10 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/setup.py" --domain gateway.getunbound.ai
 
 The script prints progress messages to stdout. Check the exit code:
 
-- **Exit code 0**: Setup succeeded. The script has persisted the key to the user's shell RC file and configured `~/.claude/anthropic_key.sh` + `apiKeyHelper` in `~/.claude/settings.json`.
+- **Exit code 0**: Setup succeeded. The script has persisted the key to the user's shell RC file.
 - **Non-zero exit code**: Setup failed. Show the script's output to the user and offer to retry.
 
-**Security property:** The API key never appears in chat, bash commands, or terminal output. It exists only inside the setup script's process memory, the RC file on disk, and `~/.claude/anthropic_key.sh`.
+**Security property:** The API key never appears in chat, bash commands, or terminal output. It exists only inside the setup script's process memory and the RC file on disk.
 
 ---
 
