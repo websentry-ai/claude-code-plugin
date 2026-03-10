@@ -95,7 +95,7 @@ def append_to_file(file_path: Path, line: str) -> bool:
             return False
     except Exception as e:
         print(f"Failed to modify {file_path}: {e}")
-        return False
+        raise
 
 
 def set_env_var_on_windows(var_name: str, value: str) -> bool:
@@ -141,11 +141,13 @@ def set_env_var_on_unix(var_name: str, value: str) -> bool:
     debug_print(f"Writing to shell file: {rc_file}")
     export_line = f"export {var_name}={shlex.quote(value)}"
 
-    # append_to_file returns False for both "already present" (idempotent success)
-    # and write errors (logged by append_to_file). Either way the desired state is
-    # either already achieved or was attempted, so we return True.
-    append_to_file(rc_file, export_line)
-    return True
+    try:
+        append_to_file(rc_file, export_line)
+        # True = added, False = already present — both are success
+        return True
+    except Exception:
+        # append_to_file already printed the error; propagate failure
+        return False
 
 
 def set_env_var(var_name: str, value: str) -> Tuple[bool, str]:
@@ -172,7 +174,7 @@ def set_env_var(var_name: str, value: str) -> Tuple[bool, str]:
         success = set_env_var_on_unix(var_name, value)
         if success:
             rc_file = get_shell_rc_file()
-            return True, f"Run 'source {rc_file}' or restart terminal"
+            return True, f"Run 'source \"{rc_file}\"' or restart terminal"
         else:
             return False, "Failed to set environment variable"
 
@@ -187,8 +189,9 @@ def remove_env_var_on_unix(var_name: str) -> bool:
     rc_file = get_shell_rc_file()
     if rc_file is None:
         return False
+    if not rc_file.exists():
+        return True  # nothing to remove
     try:
-        rc_file.touch(exist_ok=True)
         with open(rc_file, "r", encoding="utf-8") as f:
             lines = f.readlines()
         new_lines = []
@@ -418,7 +421,7 @@ def main():
     print("=" * 60)
     rc_path = get_shell_rc_file()
     if rc_path is not None:
-        print(f"\nTo apply changes in your current terminal, run:\n  source {rc_path}\n\nOr open a new terminal.")
+        print(f"\nTo apply changes in your current terminal, run:\n  source \"{rc_path}\"\n\nOr open a new terminal.")
 
 if __name__ == "__main__":
     try:

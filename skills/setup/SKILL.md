@@ -61,6 +61,8 @@ Use the same RC file the setup script reported (shown in its "Setup Complete!" o
 | Linux | zsh | `~/.zshrc` |
 | Linux | bash | `~/.bashrc` |
 
+**Windows:** Skip this step. The key was written to the registry via `setx` and will be available automatically in any new terminal session. Open a new terminal before proceeding to Step 4.
+
 ---
 
 ## Step 4 — Verify connectivity

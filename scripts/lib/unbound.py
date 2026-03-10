@@ -421,10 +421,11 @@ def build_llm_exchange(events: List[Dict], main_transcript_data: Optional[Dict] 
 
         messages.append(assistant_msg)
 
-    if len(messages) == 1 and messages[0]['role'] == 'user':
+    if not messages:
         return None
 
-    if not messages:
+    # Discard single-message exchanges — need at least a user+assistant pair
+    if len(messages) == 1:
         return None
 
     if not permission_mode:
