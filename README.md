@@ -14,12 +14,6 @@ Engineering teams adopting Claude Code face real risks: sensitive data pasted in
 claude plugin install unbound@unbound-marketplace
 ```
 
-Or from a local clone:
-
-```bash
-claude plugin install --path /path/to/claude-code-plugin
-```
-
 ### Step 2 — Run setup
 
 Open Claude Code and run:
@@ -73,7 +67,7 @@ For fleet deployment where end users cannot disable the plugin, see the [enterpr
 ## Troubleshooting
 
 **Plugin not loading**
-Run `claude plugin list` and confirm `unbound-claude-code` appears. If not, re-install with `claude plugin install --path .` from the repo root.
+Run `claude plugin list` and confirm `unbound-claude-code` appears. If not, re-install with `claude plugin install unbound@unbound-marketplace`.
 
 **API key not set**
 Run `/unbound:setup` again — it will detect the missing key and guide you through setup. You can also set `UNBOUND_CLAUDE_API_KEY` manually in your shell profile.
