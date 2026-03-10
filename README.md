@@ -58,7 +58,7 @@ For fleet deployment where users cannot disable the plugin, see [`enterprise/REA
 The short version:
 
 1. Copy `enterprise/managed-settings.json.tmpl` to the system-wide Claude Code path as `managed-settings.json`
-2. Provision `UNBOUND_API_KEY` per device via your MDM
+2. Provision `UNBOUND_CLAUDE_API_KEY` per device via your MDM
 
 ---
 
@@ -68,7 +68,7 @@ The plugin reads one environment variable:
 
 | Variable | Description |
 |---|---|
-| `UNBOUND_API_KEY` | Bearer token for the Unbound API. Get one at https://app.getunbound.ai → Settings → API Keys |
+| `UNBOUND_CLAUDE_API_KEY` | Bearer token for the Unbound API. Get one at https://app.getunbound.ai → Settings → API Keys |
 
 ---
 

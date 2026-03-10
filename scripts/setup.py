@@ -334,12 +334,12 @@ def clear_setup() -> None:
     print("Claude Code - Clearing Setup")
     print("=" * 60)
 
-    # Remove UNBOUND_API_KEY
-    success, _ = remove_env_var("UNBOUND_API_KEY")
+    # Remove UNBOUND_CLAUDE_API_KEY
+    success, _ = remove_env_var("UNBOUND_CLAUDE_API_KEY")
     if success:
-        print("Removed UNBOUND_API_KEY")
+        print("Removed UNBOUND_CLAUDE_API_KEY")
     else:
-        print("Failed to remove UNBOUND_API_KEY")
+        print("Failed to remove UNBOUND_CLAUDE_API_KEY")
         print("\n" + "=" * 60)
         print("Clear Failed!")
         print("=" * 60)
@@ -376,9 +376,9 @@ def main():
     print("Claude Code - Environment Setup")
     print("=" * 60)
 
-    # Flush previously set UNBOUND_API_KEY so we can write a fresh one
+    # Flush previously set UNBOUND_CLAUDE_API_KEY so we can write a fresh one
     try:
-        remove_env_var("UNBOUND_API_KEY")
+        remove_env_var("UNBOUND_CLAUDE_API_KEY")
     except Exception:
         pass
 
@@ -405,12 +405,12 @@ def main():
     print("API Key Verified")
     debug_print("API key verification successful")
 
-    debug_print("Setting UNBOUND_API_KEY environment variable...")
-    success, message = set_env_var("UNBOUND_API_KEY", api_key)
+    debug_print("Setting UNBOUND_CLAUDE_API_KEY environment variable...")
+    success, message = set_env_var("UNBOUND_CLAUDE_API_KEY", api_key)
     if not success:
-        print(f"Failed to configure UNBOUND_API_KEY: {message}")
+        print(f"Failed to configure UNBOUND_CLAUDE_API_KEY: {message}")
         sys.exit(1)
-    debug_print("UNBOUND_API_KEY set successfully")
+    debug_print("UNBOUND_CLAUDE_API_KEY set successfully")
 
     # Final instructions
     print("\n" + "=" * 60)

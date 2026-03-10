@@ -6,7 +6,7 @@ Phase 4: UserPromptSubmit — calls Unbound API for guardrail checks (DLP/NSFW/J
 Phase 5: PostToolUse + Stop — audit logging + async exchange submission to Unbound API.
 
 Environment variables:
-    UNBOUND_API_KEY  Bearer token for the Unbound API.
+    UNBOUND_CLAUDE_API_KEY  Bearer token for the Unbound API.
                             If unset, all hooks fail open (allow / no-op).
 """
 
@@ -96,7 +96,7 @@ def handle_pre_tool_use(payload: dict) -> None:
     """
     _ALLOW = {"hookSpecificOutput": {"permissionDecision": "allow"}, "suppressOutput": True}
 
-    api_key = os.getenv("UNBOUND_API_KEY")
+    api_key = os.getenv("UNBOUND_CLAUDE_API_KEY")
     if not api_key:
         print(json.dumps(_ALLOW))
         return
@@ -126,7 +126,7 @@ def handle_user_prompt_submit(payload: dict) -> None:
     - No API key         → skip policy check, log, fail open.
     - API error/timeout  → skip policy check, log, fail open.
     """
-    api_key = os.getenv("UNBOUND_API_KEY")
+    api_key = os.getenv("UNBOUND_CLAUDE_API_KEY")
 
     if api_key:
         try:
@@ -166,7 +166,7 @@ def handle_stop(payload: dict) -> None:
     """
     _audit_log(_make_log_entry("Stop", payload))
 
-    api_key = os.getenv("UNBOUND_API_KEY")
+    api_key = os.getenv("UNBOUND_CLAUDE_API_KEY")
     if not api_key:
         return
 
