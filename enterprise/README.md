@@ -56,7 +56,7 @@ Set a single key for all users via a login script or MDM configuration profile:
 
 ```bash
 # /etc/profile.d/unbound.sh  (Linux)
-export UNBOUND_API_KEY="<YOUR_KEY>"
+export UNBOUND_API_KEY='<YOUR_KEY>'
 ```
 
 macOS: deploy a Configuration Profile (`.mobileconfig`) that sets the env var, or add the export to `/etc/zshenv`.

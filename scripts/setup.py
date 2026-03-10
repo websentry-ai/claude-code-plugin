@@ -340,6 +340,10 @@ def clear_setup() -> None:
         print("Removed UNBOUND_API_KEY")
     else:
         print("Failed to remove UNBOUND_API_KEY")
+        print("\n" + "=" * 60)
+        print("Clear Failed!")
+        print("=" * 60)
+        sys.exit(1)
 
     print("\n" + "=" * 60)
     print("Clear Complete!")
