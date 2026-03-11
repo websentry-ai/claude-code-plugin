@@ -10,8 +10,11 @@ Engineering teams adopting Claude Code face real risks: sensitive data pasted in
 
 ### Step 1 — Install the plugin
 
-```bash
-claude plugin install unbound@unbound-marketplace
+Inside Claude Code, run these two commands:
+
+```
+/plugin marketplace add websentry-ai/claude-code-plugin
+/plugin install unbound-claude-code@websentry-ai/claude-code-plugin
 ```
 
 ### Step 2 — Run setup
@@ -67,7 +70,7 @@ For fleet deployment where end users cannot disable the plugin, see the [enterpr
 ## Troubleshooting
 
 **Plugin not loading**
-Run `claude plugin list` and confirm `unbound-claude-code` appears. If not, re-install with `claude plugin install unbound@unbound-marketplace`.
+Run `claude plugin list` and confirm `unbound-claude-code` appears. If not, re-install with `/plugin marketplace add websentry-ai/claude-code-plugin` followed by `/plugin install unbound-claude-code@websentry-ai/claude-code-plugin`.
 
 **API key not set**
 Run `/unbound:setup` again — it will detect the missing key and guide you through setup. You can also set `UNBOUND_CLAUDE_API_KEY` manually in your shell profile.
