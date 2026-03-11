@@ -41,7 +41,7 @@ def _log_api_call(endpoint: str, success: bool, latency_ms: float, error: str = 
 
 def log_error(message: str):
     """Log error with timestamp to error.log, keeping only last 25 errors."""
-    timestamp = datetime.utcnow().isoformat() + 'Z'
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f") + 'Z'
     error_entry = f"{timestamp}: {message}\n"
 
     try:
@@ -178,6 +178,20 @@ def get_latest_user_prompt_for_session(session_id: str, transcript_path: Optiona
     return None
 
 
+def parse_mcp_tool_name(tool_name: str) -> tuple:
+    """Parse MCP tool names in the format mcp__server__tool.
+
+    Returns:
+        (mcp_server, mcp_tool) if the name matches the MCP pattern,
+        (None, None) otherwise.
+    """
+    if tool_name and tool_name.startswith('mcp__'):
+        parts = tool_name.split('__', 2)
+        if len(parts) == 3:
+            return parts[1], parts[2]
+    return None, None
+
+
 def extract_command_for_pretool(event: Dict) -> str:
     """Extract command from tool_input based on tool type."""
     tool_input = event.get('tool_input', {})
@@ -204,6 +218,10 @@ def extract_command_for_pretool(event: Dict) -> str:
     # Task: prompt
     if tool_name == 'Task' and 'prompt' in tool_input:
         return tool_input['prompt']
+    # MCP tools: use the full tool name as the command
+    mcp_server, mcp_tool = parse_mcp_tool_name(tool_name)
+    if mcp_server:
+        return f"{mcp_server}/{mcp_tool}"
     # Default: tool name
     return tool_name
 
@@ -288,17 +306,23 @@ def process_pre_tool_use(event: Dict, api_key: str) -> Dict:
 
     user_prompt = get_latest_user_prompt_for_session(session_id, transcript_path)
     command = extract_command_for_pretool(event)
+    mcp_server, mcp_tool = parse_mcp_tool_name(tool_name)
+
+    pre_tool_data = {
+        'command': command,
+        'tool_name': tool_name,
+        'metadata': event
+    }
+    if mcp_server:
+        pre_tool_data['mcp_server'] = mcp_server
+        pre_tool_data['mcp_tool'] = mcp_tool
 
     request_body = {
         'conversation_id': session_id,
         'unbound_app_label': 'claude-code',
         'model': model,
         'event_name': 'tool_use',
-        'pre_tool_use_data': {
-            'command': command,
-            'tool_name': tool_name,
-            'metadata': event
-        },
+        'pre_tool_use_data': pre_tool_data,
         'messages': [{'role': 'user', 'content': user_prompt}] if user_prompt else []
     }
 
@@ -396,18 +420,12 @@ def build_llm_exchange(events: List[Dict], main_transcript_data: Optional[Dict] 
             assistant_msg['tool_use'] = assistant_tool_uses
 
         messages.append(assistant_msg)
-    elif user_prompt and assistant_tool_uses:
-        assistant_msg = {
-            'role': 'assistant',
-            'content': "",
-            'tool_use': assistant_tool_uses
-        }
-        messages.append(assistant_msg)
-
-    if len(messages) == 1 and messages[0]['role'] == 'user':
-        return None
 
     if not messages:
+        return None
+
+    # Discard single-message exchanges — need at least a user+assistant pair
+    if len(messages) == 1:
         return None
 
     if not permission_mode:
