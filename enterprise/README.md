@@ -63,7 +63,7 @@ macOS: deploy a Configuration Profile (`.mobileconfig`) that sets the env var, o
 
 ### 3. Verify
 
-On an enrolled machine, open Claude Code and run `/unbound:setup`. It should report:
+On an enrolled machine, open Claude Code and run `/unbound-claude-code:setup`. It should report:
 
 ```
 ✓ UNBOUND_CLAUDE_API_KEY saved ...
