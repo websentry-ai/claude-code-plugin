@@ -22,7 +22,7 @@ Inside Claude Code, run these two commands:
 Open Claude Code and run:
 
 ```
-/unbound:setup
+/unbound-claude-code:setup
 ```
 
 The setup skill walks you through getting an API key, persisting it to your shell profile, and verifying connectivity. Takes under 5 minutes.
@@ -73,7 +73,7 @@ For fleet deployment where end users cannot disable the plugin, see the [enterpr
 Run `claude plugin list` and confirm `unbound-claude-code` appears. If not, re-install with `/plugin marketplace add websentry-ai/claude-code-plugin` followed by `/plugin install unbound-claude-code@websentry-ai/claude-code-plugin`.
 
 **API key not set**
-Run `/unbound:setup` again — it will detect the missing key and guide you through setup. You can also set `UNBOUND_CLAUDE_API_KEY` manually in your shell profile.
+Run `/unbound-claude-code:setup` again — it will detect the missing key and guide you through setup. You can also set `UNBOUND_CLAUDE_API_KEY` manually in your shell profile.
 
 **Command blocked unexpectedly**
 Check your policy rules at [app.getunbound.ai](https://app.getunbound.ai). The block response includes a reason — review it to confirm the rule that triggered.
