@@ -6,6 +6,7 @@ import platform
 import subprocess
 import json
 import pwd
+import urllib.parse
 from pathlib import Path
 from typing import Tuple, List
 
@@ -104,22 +105,17 @@ def append_to_file(file_path: Path, line: str, var_name: str = None) -> bool:
         with open(file_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
+        # Remove existing entries for this var (if replacing)
         if var_name:
             export_prefix = f"export {var_name}="
             lines = [l for l in lines if not l.strip().startswith(export_prefix)]
 
+        # Append the new line if not already present
         if line + "\n" not in lines and line not in [l.rstrip() for l in lines]:
             lines.append(f"{line}\n")
 
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.writelines(lines)
-            return True
-
-        if var_name:
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.writelines(lines)
-            return True
-
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.writelines(lines)
         return True
     except Exception as e:
         print(f"Failed to modify {file_path}: {e}")
@@ -139,17 +135,26 @@ def get_all_user_homes() -> List[Tuple[str, Path]]:
     """Get all real user home directories on the system (excluding system accounts)."""
     user_homes = []
 
+    system = platform.system().lower()
     try:
         for user in pwd.getpwall():
             uid = user.pw_uid
             username = user.pw_name
             home_dir = Path(user.pw_dir)
 
-            # Filter out system accounts (UID < 500 on macOS)
-            if uid >= 500 and home_dir.exists() and home_dir.is_dir():
-                if str(home_dir).startswith('/Users/') and username not in ['Shared', 'Guest']:
-                    user_homes.append((username, home_dir))
-                    debug_print(f"Found user: {username} -> {home_dir}")
+            if not home_dir.exists() or not home_dir.is_dir():
+                continue
+            if username in ['Shared', 'Guest', 'nobody', 'root']:
+                continue
+
+            # macOS: real users have UID >= 500 under /Users/
+            # Linux: real users have UID >= 1000 under /home/
+            if system == "darwin" and uid >= 500 and str(home_dir).startswith('/Users/'):
+                user_homes.append((username, home_dir))
+                debug_print(f"Found user: {username} -> {home_dir}")
+            elif system == "linux" and uid >= 1000 and str(home_dir).startswith('/home/'):
+                user_homes.append((username, home_dir))
+                debug_print(f"Found user: {username} -> {home_dir}")
 
         return user_homes
     except Exception as e:
@@ -339,10 +344,10 @@ def remove_managed_settings() -> bool:
 
 def fetch_api_key_from_mdm(base_url: str, app_name: str, auth_api_key: str, serial_number: str) -> str:
     """Fetch API key from MDM endpoint."""
-    params = f"serial_number={serial_number}&app_type=claude-code"
+    params_dict = {"serial_number": serial_number, "app_type": "claude-code"}
     if app_name:
-        params = f"app_name={app_name}&{params}"
-    url = f"{base_url.rstrip('/')}/api/v1/automations/mdm/get_application_api_key/?{params}"
+        params_dict["app_name"] = app_name
+    url = f"{base_url.rstrip('/')}/api/v1/automations/mdm/get_application_api_key/?{urllib.parse.urlencode(params_dict)}"
 
     debug_print(f"Fetching API key from: {url}")
 
@@ -363,7 +368,11 @@ def fetch_api_key_from_mdm(base_url: str, app_name: str, auth_api_key: str, seri
         response_body = '\n'.join(output_lines[:-1])
 
         debug_print(f"HTTP status: {http_code}")
-        debug_print(f"Response: {response_body}")
+        try:
+            logged_data = {k: v for k, v in json.loads(response_body).items() if k != "api_key"}
+            debug_print(f"Response (key redacted): {json.dumps(logged_data)}")
+        except Exception:
+            debug_print("Response: [could not parse for safe logging]")
 
         if http_code != "200":
             print(f"API request failed with status {http_code}")
@@ -451,8 +460,8 @@ def main():
     print("=" * 60)
 
     # Check platform
-    if platform.system().lower() != "darwin":
-        print("This script only supports macOS")
+    if platform.system().lower() not in ("darwin", "linux"):
+        print("This script only supports macOS and Linux")
         return
 
     # Check admin privileges
@@ -487,6 +496,10 @@ def main():
         print("\nMissing required arguments")
         print("Usage: sudo python3 mdm-setup.py --url <base_url> --api_key <api_key> [--app_name <app_name>] [--debug]")
         print("   Or: sudo python3 mdm-setup.py --clear [--debug]")
+        return
+
+    if '\n' in auth_api_key or '\r' in auth_api_key:
+        print("\nInvalid API key: must not contain newline characters")
         return
 
     # Get serial number
