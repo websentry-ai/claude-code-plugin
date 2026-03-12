@@ -6,6 +6,7 @@ import platform
 import subprocess
 import json
 import pwd
+import re
 import urllib.parse
 from pathlib import Path
 from typing import Tuple, List
@@ -70,6 +71,57 @@ def get_mac_serial_number() -> str:
     except Exception as e:
         debug_print(f"Failed to get serial number: {e}")
         return None
+
+
+def get_linux_serial_number() -> str:
+    """Get the device serial number on Linux via DMI or machine-id."""
+    # Try /sys/class/dmi/id/product_serial (requires root)
+    try:
+        serial_path = Path("/sys/class/dmi/id/product_serial")
+        if serial_path.exists():
+            serial = serial_path.read_text().strip()
+            if serial and serial.lower() not in ("", "none", "to be filled by o.e.m."):
+                return serial
+    except Exception as e:
+        debug_print(f"Failed to read DMI serial: {e}")
+
+    # Fallback: dmidecode
+    try:
+        result = subprocess.run(
+            ["dmidecode", "-s", "system-serial-number"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if result.returncode == 0:
+            serial = result.stdout.strip()
+            if serial and serial.lower() not in ("", "none", "to be filled by o.e.m."):
+                return serial
+    except Exception as e:
+        debug_print(f"dmidecode failed: {e}")
+
+    # Last resort: /etc/machine-id (unique per install, not hardware serial)
+    try:
+        machine_id_path = Path("/etc/machine-id")
+        if machine_id_path.exists():
+            machine_id = machine_id_path.read_text().strip()
+            if machine_id:
+                debug_print("Using /etc/machine-id as device identifier")
+                return machine_id
+    except Exception as e:
+        debug_print(f"Failed to read machine-id: {e}")
+
+    return None
+
+
+def get_device_serial_number() -> str:
+    """Get device serial number, dispatching to platform-specific method."""
+    system = platform.system().lower()
+    if system == "darwin":
+        return get_mac_serial_number()
+    elif system == "linux":
+        return get_linux_serial_number()
+    return None
 
 
 def get_shell_rc_file() -> Path:
@@ -264,7 +316,7 @@ def remove_env_var_from_user(username: str, home_dir: Path, var_name: str) -> bo
 
 
 def set_env_var_unix(var_name: str, value: str) -> Tuple[bool, bool]:
-    if platform.system().lower() == "darwin" and os.geteuid() == 0:
+    if platform.system().lower() in ("darwin", "linux") and os.geteuid() == 0:
         return set_env_var_system_wide_macos(var_name, value)
 
     rc_file = get_shell_rc_file()
@@ -383,6 +435,9 @@ def fetch_api_key_from_mdm(base_url: str, app_name: str, auth_api_key: str, seri
             api_key = data.get("api_key")
             if not api_key:
                 print("No api_key in response")
+                return None
+            if not re.fullmatch(r'[A-Za-z0-9._\-]{8,256}', api_key):
+                print("Received api_key has unexpected format — aborting for safety")
                 return None
             user_email = data.get("email")
             first_name = data.get("first_name")
@@ -504,7 +559,7 @@ def main():
 
     # Get serial number
     print("\nGetting device serial number...")
-    serial_number = get_mac_serial_number()
+    serial_number = get_device_serial_number()
     if not serial_number:
         print("Failed to get device serial number")
         return
