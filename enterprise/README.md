@@ -52,7 +52,7 @@ This removes `managed-settings.json` and `UNBOUND_CLAUDE_API_KEY` from all users
 
 ### 1. Gets device serial number
 
-Uses `system_profiler SPHardwareDataType` to get the Mac serial number automatically.
+On macOS, uses `system_profiler SPHardwareDataType`. On Linux, reads `/sys/class/dmi/id/product_serial`, falls back to `dmidecode`, then `/etc/machine-id`.
 
 ### 2. Fetches API key from MDM endpoint
 
@@ -74,7 +74,7 @@ Returns:
 
 ### 3. Sets environment variable for all users
 
-Writes `export UNBOUND_CLAUDE_API_KEY="<key>"` to both `~/.zprofile` and `~/.bash_profile` for every real user account on the machine. Sets correct file ownership via `chown`.
+Writes `export UNBOUND_CLAUDE_API_KEY="<key>"` to shell rc files for every real user account on the machine. On macOS: `~/.zprofile` and `~/.bash_profile`. On Linux: `~/.zshrc`, `~/.bashrc`, `~/.zprofile`, and `~/.bash_profile` (covers both login and non-login shells). Sets correct file ownership via `chown`.
 
 ### 4. Deploys managed-settings.json
 
@@ -90,7 +90,7 @@ When `enabledPlugins` is set in managed settings, Claude Code installs the liste
 
 ### 5. Verifies connectivity
 
-Checks that the API key works by hitting `https://api.getunbound.ai/v1/models`. If unreachable, the plugin runs in fail-open mode.
+Checks that the API key works by hitting `{base_url}/v1/models`. If unreachable, the plugin runs in fail-open mode.
 
 ## Jamf / MDM integration
 

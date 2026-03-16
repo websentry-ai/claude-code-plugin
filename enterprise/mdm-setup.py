@@ -343,7 +343,7 @@ def set_env_var(var_name: str, value: str) -> Tuple[bool, bool, str]:
     elif system in ["darwin", "linux"]:
         success, changed = set_env_var_unix(var_name, value)
         if success:
-            if system == "darwin" and os.geteuid() == 0:
+            if system in ("darwin", "linux") and os.geteuid() == 0:
                 debug_print(f"Environment variable {var_name} set system-wide")
                 return True, changed, "Set system-wide for all users"
             else:
