@@ -239,10 +239,11 @@ def set_env_var_system_wide_macos(var_name: str, value: str) -> Tuple[bool, bool
                 debug_print(f"Could not get UID/GID for {username}")
                 continue
 
-            rc_files = [
-                home_dir / ".zprofile",
-                home_dir / ".bash_profile"
-            ]
+            if platform.system().lower() == "darwin":
+                rc_files = [home_dir / ".zprofile", home_dir / ".bash_profile"]
+            else:  # linux
+                rc_files = [home_dir / ".zshrc", home_dir / ".bashrc",
+                            home_dir / ".zprofile", home_dir / ".bash_profile"]
             debug_print(f"Writing to shell files: {[str(f) for f in rc_files]}")
 
             user_success = False
@@ -279,10 +280,11 @@ def set_env_var_system_wide_macos(var_name: str, value: str) -> Tuple[bool, bool
 def remove_env_var_from_user(username: str, home_dir: Path, var_name: str) -> bool:
     """Remove environment variable from a user's shell rc files."""
     try:
-        rc_files = [
-            home_dir / ".zprofile",
-            home_dir / ".bash_profile"
-        ]
+        if platform.system().lower() == "darwin":
+            rc_files = [home_dir / ".zprofile", home_dir / ".bash_profile"]
+        else:  # linux
+            rc_files = [home_dir / ".zshrc", home_dir / ".bashrc",
+                        home_dir / ".zprofile", home_dir / ".bash_profile"]
 
         success = False
         export_prefix = f"export {var_name}="
@@ -595,7 +597,7 @@ def main():
         result = subprocess.run(
             ["curl", "-fsSL", "-o", "/dev/null", "-w", "%{http_code}",
              "-H", f"Authorization: Bearer {api_key}",
-             "https://api.getunbound.ai/v1/models"],
+             f"{base_url.rstrip('/')}/v1/models"],
             capture_output=True,
             text=True,
             timeout=10

@@ -20,7 +20,7 @@ The script auto-detects the device serial number, fetches the API key, and confi
 
 ## Requirements
 
-- macOS (Linux/Windows support planned)
+- macOS and Linux (Windows support planned)
 - Root/admin privileges (`sudo`)
 - An MDM auth key from your Unbound dashboard (Settings → MDM)
 - Python 3 (pre-installed on macOS)
