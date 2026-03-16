@@ -1,10 +1,84 @@
 # Enterprise MDM Deployment
 
-This directory contains the managed-settings template for enforcing the Unbound plugin across a fleet.
+This directory contains the tools for enforcing the Unbound plugin across a fleet of devices.
 
 ## What it does
 
-`managed-settings.json` is read by Claude Code from a system-wide path that regular users cannot modify:
+The MDM setup script (`mdm-setup.py`) automates the full enterprise deployment in a single command:
+
+1. Fetches a per-device API key from the Unbound MDM endpoint using the device serial number
+2. Sets `UNBOUND_CLAUDE_API_KEY` for all users on the machine
+3. Deploys `managed-settings.json` so Claude Code auto-installs the plugin and users cannot disable it
+
+## Quick start
+
+```bash
+sudo python3 mdm-setup.py --url https://api.getunbound.ai --api_key <MDM_AUTH_KEY>
+```
+
+The script auto-detects the device serial number, fetches the API key, and configures everything.
+
+## Requirements
+
+- macOS and Linux (Windows support planned)
+- Root/admin privileges (`sudo`)
+- An MDM auth key from your Unbound dashboard (Settings → MDM)
+- Python 3 (pre-installed on macOS)
+
+## Usage
+
+### Setup
+
+```bash
+# Basic — auto-detect serial, fetch key, deploy settings
+sudo python3 mdm-setup.py --url https://api.getunbound.ai --api_key <MDM_AUTH_KEY>
+
+# With app name (for multi-team setups)
+sudo python3 mdm-setup.py --url https://api.getunbound.ai --api_key <MDM_AUTH_KEY> --app_name "engineering"
+
+# Debug mode
+sudo python3 mdm-setup.py --url https://api.getunbound.ai --api_key <MDM_AUTH_KEY> --debug
+```
+
+### Uninstall
+
+```bash
+sudo python3 mdm-setup.py --clear
+```
+
+This removes `managed-settings.json` and `UNBOUND_CLAUDE_API_KEY` from all users.
+
+## What the script does
+
+### 1. Gets device serial number
+
+On macOS, uses `system_profiler SPHardwareDataType`. On Linux, reads `/sys/class/dmi/id/product_serial`, falls back to `dmidecode`, then `/etc/machine-id`.
+
+### 2. Fetches API key from MDM endpoint
+
+```
+GET {base_url}/api/v1/automations/mdm/get_application_api_key/
+    ?serial_number=<SERIAL>&app_type=claude-code[&app_name=<NAME>]
+Authorization: Bearer <MDM_AUTH_KEY>
+```
+
+Returns:
+```json
+{
+  "api_key": "...",
+  "email": "user@example.com",
+  "first_name": "...",
+  "last_name": "..."
+}
+```
+
+### 3. Sets environment variable for all users
+
+Writes `export UNBOUND_CLAUDE_API_KEY="<key>"` to shell rc files for every real user account on the machine. On macOS: `~/.zprofile` and `~/.bash_profile`. On Linux: `~/.zshrc`, `~/.bashrc`, `~/.zprofile`, and `~/.bash_profile` (covers both login and non-login shells). Sets correct file ownership via `chown`.
+
+### 4. Deploys managed-settings.json
+
+Copies `managed-settings.json` to the system-wide Claude Code path:
 
 | OS | Path |
 |---|---|
@@ -14,59 +88,28 @@ This directory contains the managed-settings template for enforcing the Unbound 
 
 When `enabledPlugins` is set in managed settings, Claude Code installs the listed plugins automatically and **users cannot disable them**.
 
-## Deployment steps
+### 5. Verifies connectivity
 
-### 1. Deploy managed-settings.json
+Checks that the API key works by hitting `{base_url}/v1/models`. If unreachable, the plugin runs in fail-open mode.
 
-Copy `managed-settings.json.tmpl` to the system path for your target OS and rename it to `managed-settings.json`. No substitution needed — the file is valid JSON as-is.
+## Jamf / MDM integration
 
-macOS (run as root or via MDM):
-
-```bash
-mkdir -p "/Library/Application Support/ClaudeCode"
-cp managed-settings.json.tmpl "/Library/Application Support/ClaudeCode/managed-settings.json"
-```
-
-Linux (run as root):
+Add `mdm-setup.py` as a script in your MDM tool. Example Jamf policy:
 
 ```bash
-mkdir -p /etc/claude-code
-cp managed-settings.json.tmpl /etc/claude-code/managed-settings.json
+#!/bin/bash
+python3 /path/to/mdm-setup.py --url https://api.getunbound.ai --api_key "$MDM_AUTH_KEY"
 ```
 
-### 2. Set UNBOUND_CLAUDE_API_KEY for each user
+Pass the MDM auth key as a Jamf script parameter or via a secure configuration profile.
 
-The plugin reads `UNBOUND_CLAUDE_API_KEY` from the environment. This must be set per user (not in managed-settings.json, which does not support env vars).
+## Manual alternative
 
-**Option A — MDM-issued device API key (recommended)**
+If you prefer not to use the automated script:
 
-Use the Unbound MDM provisioning endpoint to fetch a per-device key at enrollment time:
+1. Deploy `managed-settings.json.tmpl` to the system path (see table above) as `managed-settings.json`
+2. Set `UNBOUND_CLAUDE_API_KEY` for each user via a login script or MDM configuration profile
 
-```
-GET https://api.getunbound.ai/api/v1/automations/mdm/get_application_api_key/
-    ?serial_number=<DEVICE_SERIAL>
-    &app_type=claude-code
-```
+## Verify
 
-Requires an Unbound MDM auth key. See your Unbound dashboard under Settings → MDM.
-
-**Option B — Shared fleet key**
-
-Set a single key for all users via a login script or MDM configuration profile:
-
-```bash
-# /etc/profile.d/unbound.sh  (Linux)
-export UNBOUND_CLAUDE_API_KEY='<YOUR_KEY>'
-```
-
-macOS: deploy a Configuration Profile (`.mobileconfig`) that sets the env var, or add the export to `/etc/zshenv`.
-
-### 3. Verify
-
-On an enrolled machine, open Claude Code and run `/unbound-claude-code:setup`. It should report:
-
-```
-✓ UNBOUND_CLAUDE_API_KEY saved ...
-✓ API connectivity verified (HTTP 200)
-✓ Unbound plugin is active
-```
+On an enrolled machine, open Claude Code and run `/unbound-claude-code:setup`. It should detect the existing key and confirm connectivity.
