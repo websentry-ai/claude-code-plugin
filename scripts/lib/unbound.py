@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 
-UNBOUND_GATEWAY_URL = "https://api.getunbound.ai"
+UNBOUND_GATEWAY_URL = os.environ.get("UNBOUND_GATEWAY_URL", "https://api.getunbound.ai").rstrip("/")
 AUDIT_LOG = Path.home() / ".claude" / "hooks" / "agent-audit.log"
 ERROR_LOG = Path.home() / ".claude" / "hooks" / "error.log"
 DEBUG_LOG = Path.home() / ".unbound" / "logs" / "debug.jsonl"
