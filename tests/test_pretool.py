@@ -105,8 +105,7 @@ class TestExtractCommandForPretool:
             {"session_id": "my-session", "tool_name": "Bash", "tool_input": {"command": "ls"}},
             "key",
         )
-        cmd = mock_run.call_args[0][0]
-        payload = json.loads(cmd[cmd.index("-d") + 1])
+        payload = json.loads(mock_run.call_args[1]["input"].decode())
         assert payload["conversation_id"] == "my-session"
 
     @patch("subprocess.run")
@@ -116,8 +115,7 @@ class TestExtractCommandForPretool:
             {"session_id": "s", "tool_name": "Bash", "tool_input": {"command": "pwd"}},
             "key",
         )
-        cmd = mock_run.call_args[0][0]
-        payload = json.loads(cmd[cmd.index("-d") + 1])
+        payload = json.loads(mock_run.call_args[1]["input"].decode())
         assert payload["event_name"] == "tool_use"
         assert payload["unbound_app_label"] == "claude-code"
 
@@ -128,8 +126,7 @@ class TestExtractCommandForPretool:
             {"session_id": "s", "tool_name": "Bash", "tool_input": {"command": "echo hi"}},
             "key",
         )
-        cmd = mock_run.call_args[0][0]
-        payload = json.loads(cmd[cmd.index("-d") + 1])
+        payload = json.loads(mock_run.call_args[1]["input"].decode())
         pre = payload["pre_tool_use_data"]
         assert pre["tool_name"] == "Bash"
         assert pre["command"] == "echo hi"

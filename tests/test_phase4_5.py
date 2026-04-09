@@ -67,8 +67,7 @@ class TestUserPromptTransformation:
                 hh.handle_user_prompt_submit(
                     {"session_id": "s1", "prompt": "hello world"}
                 )
-        cmd = mock_run.call_args[0][0]
-        payload = json.loads(cmd[cmd.index("-d") + 1])
+        payload = json.loads(mock_run.call_args[1]["input"].decode())
         assert payload["event_name"] == "user_prompt"
         assert payload["messages"][0] == {"role": "user", "content": "hello world"}
 
@@ -80,8 +79,7 @@ class TestUserPromptTransformation:
                 hh.handle_user_prompt_submit(
                     {"session_id": "my-session", "prompt": "test"}
                 )
-        cmd = mock_run.call_args[0][0]
-        payload = json.loads(cmd[cmd.index("-d") + 1])
+        payload = json.loads(mock_run.call_args[1]["input"].decode())
         assert payload["conversation_id"] == "my-session"
         assert payload["unbound_app_label"] == "claude-code"
 
