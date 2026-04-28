@@ -1,18 +1,8 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "unbound-marketplace",
-  "version": "1.0.0",
-  "description": "Unbound AI security and governance plugins for Claude Code",
-  "metadata": {
-    "description": "Unbound is an AI security gateway that lets engineering teams use Claude Code without risking data leakage or policy violations. It enforces real-time DLP, jailbreak detection, and command policies — and streams session analytics to the Unbound dashboard for organisation-wide visibility."
-  },
-  "owner": {
-    "name": "Unbound Security",
-    "email": "support@getunbound.ai"
-  },
   "plugins": [
     {
-      "name": "unbound-claude-code",
+      "name": "unbound",
       "description": "Security, governance, and analytics for Claude Code — powered by Unbound AI.",
       "source": {
         "source": "github",
