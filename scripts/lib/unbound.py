@@ -243,7 +243,7 @@ def send_to_hook_api(request_body: Dict, api_key: str) -> Dict:
              "-H", f"Authorization: Bearer {api_key}",
              "-H", "Content-Type: application/json",
              "--data-binary", "@-", url],
-            input=data.encode(),
+            input=data.encode("utf-8", errors="replace"),
             capture_output=True,
             timeout=12
         )
@@ -459,7 +459,7 @@ def send_to_api(exchange: Dict, api_key: str) -> bool:
              "--connect-timeout", "5", "--max-time", "10",
              "-H", f"Authorization: Bearer {api_key}",
              "-H", "Content-Type: application/json", "--data-binary", "@-", url],
-            input=data.encode(),
+            input=data.encode("utf-8", errors="replace"),
             capture_output=True,
             timeout=15
         )
