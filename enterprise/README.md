@@ -112,4 +112,4 @@ If you prefer not to use the automated script:
 
 ## Verify
 
-On an enrolled machine, open Claude Code and run `/unbound-claude-code:setup`. It should detect the existing key and confirm connectivity.
+On an enrolled machine, open Claude Code and run `/unbound:setup`. It should detect the existing key and confirm connectivity.
