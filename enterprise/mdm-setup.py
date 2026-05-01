@@ -362,7 +362,7 @@ def deploy_managed_settings() -> bool:
 
     managed_settings = {
         "enabledPlugins": [
-            "websentry-ai/claude-code-plugin/unbound-claude-code"
+            "websentry-ai/claude-code-plugin/unbound"
         ]
     }
 
