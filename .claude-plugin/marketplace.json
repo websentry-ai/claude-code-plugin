@@ -1,5 +1,9 @@
 {
   "name": "unbound-marketplace",
+  "owner": {
+    "name": "Unbound Security",
+    "email": "support@unboundsecurity.ai"
+  },
   "plugins": [
     {
       "name": "unbound",
