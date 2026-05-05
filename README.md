@@ -81,6 +81,10 @@ Check your policy rules at [app.getunbound.ai](https://app.getunbound.ai). The b
 **Events not appearing on dashboard**
 Verify your API key is valid and the Unbound API is reachable. Check `~/.claude/hooks/error.log` for details. Offline events are stored in `~/.unbound/logs/offline-events.jsonl` and replayed automatically.
 
+## Support
+
+Questions or issues? Email [support@unboundsecurity.ai](mailto:support@unboundsecurity.ai).
+
 ## License
 
 [MIT](LICENSE)
