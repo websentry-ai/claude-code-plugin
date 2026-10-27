@@ -108,7 +108,7 @@ IMPORTANT: You must restart this Claude Code session for hooks to use the new ke
 What happens next:
   - Every tool use (Bash, Edit, Write...) is checked against your Unbound policies
   - User prompts are scanned for DLP / NSFW / jailbreak guardrails
-  - Session data streams to your Unbound dashboard for analytics
+  - Each conversation turn is sent to your Unbound dashboard for analytics
 
 To view your policies and guardrails: https://app.getunbound.ai
 ```

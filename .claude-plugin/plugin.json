@@ -1,7 +1,7 @@
 {
   "name": "unbound",
   "version": "1.1.0",
-  "description": "Use Claude Code without fear of data leakage. Unbound enforces command policies, DLP and jailbreak guardrails, and streams session analytics to your security dashboard — all with zero-latency fail-open design.",
+  "description": "Use Claude Code without fear of data leakage. Unbound enforces command policies, DLP and jailbreak guardrails, and sends session analytics to your security dashboard — all with zero-latency fail-open design.",
   "author": {
     "name": "Unbound Security",
     "url": "https://getunbound.ai",

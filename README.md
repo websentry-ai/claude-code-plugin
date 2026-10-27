@@ -4,7 +4,7 @@ Real-time policy enforcement, DLP guardrails, and session analytics for [Claude 
 
 ## Why Unbound?
 
-Engineering teams adopting Claude Code face real risks: sensitive data pasted into prompts, dangerous commands executed without oversight, and zero visibility into what's happening across sessions. Unbound solves this by sitting between your developers and Claude Code — enforcing security policies in real time and streaming every session to a central dashboard. No workflow disruption, no developer friction.
+Engineering teams adopting Claude Code face real risks: sensitive data pasted into prompts, dangerous commands executed without oversight, and zero visibility into what's happening across sessions. Unbound solves this by sitting between your developers and Claude Code — enforcing security policies in real time and sending each conversation turn to a central dashboard. No workflow disruption, no developer friction.
 
 ## Quick Start
 
@@ -52,29 +52,31 @@ The plugin sends data only to the Unbound API at `https://api.getunbound.ai`, an
 
 | Hook | Endpoint | Data sent |
 |---|---|---|
-| `UserPromptSubmit` | `POST /v1/hooks/pretool` | Session ID, model name, and the text of your prompt, for the DLP / NSFW / jailbreak check |
-| `PreToolUse` | `POST /v1/hooks/pretool` | Session ID, model name, tool name, the full tool input (for example the shell command, file path, or URL), MCP server and tool name, and your latest prompt, for the policy check |
+| `UserPromptSubmit` | `POST /v1/hooks/pretool` | Session ID, model name (or `auto`), and the text of your prompt, for the DLP / NSFW / jailbreak check |
+| `PreToolUse` | `POST /v1/hooks/pretool` | Session ID, model name (or `auto`), tool name, the full tool input (for example the shell command, file path, or URL), MCP server and tool name, your latest prompt, and the rest of the hook event that Claude Code passes to the plugin (working directory, transcript file path, permission mode, tool-use ID), for the policy check. If your prompt is not in the local audit log, the last user entry of the session transcript is sent instead, which can be a tool result |
 | `PostToolUse` | none | Nothing is sent. The tool input and output are written to the local audit log |
 | `Stop` | `POST /v1/hooks/claude` | Session ID, permission mode, your prompt, each tool call in the turn with its input and output, and Claude's response (read from the session transcript) |
 
-Unbound uses this data to enforce your organization's policies and to show sessions on your Unbound dashboard. The plugin sends nothing else and contacts no other service.
+Unbound uses this data to enforce your organization's policies and to show sessions on your Unbound dashboard. The plugin sends no other data and contacts no other service.
 
 ### What is stored on your machine
+
+These files are written whether or not `UNBOUND_CLAUDE_API_KEY` is set.
 
 | Path | Contents |
 |---|---|
 | `~/.unbound/logs/debug.jsonl` | The raw input of every hook event (prompts, tool inputs and outputs) and the timing of each API call. Not rotated; delete it at any time |
-| `~/.claude/hooks/agent-audit.log` | Prompts and tool calls of the current session, used to build the exchange sent at `Stop`. Entries are removed once sent, and the file is trimmed to the latest session when it passes 50 entries |
-| `~/.unbound/logs/offline-events.jsonl` | Exchanges that could not be sent because the API was unreachable. They are kept for inspection and are not resent automatically |
+| `~/.claude/hooks/agent-audit.log` | Prompts and tool calls of the current session, used to build the exchange sent at `Stop`. When a key is set, entries are removed once sent, and the file is trimmed to one session when it passes 50 entries. Without a key it is not trimmed |
+| `~/.unbound/logs/offline-events.jsonl` | Exchanges that could not be sent because the API was unreachable (only when a key is set). They are kept for inspection, are not resent automatically, and the file is not rotated |
 | `~/.claude/hooks/error.log` | The last 25 API errors |
 
 ### What setup changes
 
-`/unbound:setup` opens your browser at `https://gateway.getunbound.ai` so you can sign in and create a key. A one-time server on `127.0.0.1` receives the key, and the script appends `export UNBOUND_CLAUDE_API_KEY=...` to your shell profile (`~/.zprofile`, `~/.bash_profile`, `~/.zshrc`, or `~/.bashrc`). On Windows it sets a user environment variable with `setx`. Run the setup again and choose **Reconfigure** to replace the key, or remove the line from your shell profile to remove it.
+`/unbound:setup` first removes any existing `export UNBOUND_CLAUDE_API_KEY=` line from your shell profile. It then opens your browser at `https://gateway.getunbound.ai` so you can sign in and create a key. A one-time server on `127.0.0.1` receives the key, and the script appends `export UNBOUND_CLAUDE_API_KEY=...` to your shell profile (`~/.zprofile`, `~/.bash_profile`, `~/.zshrc`, or `~/.bashrc`). On Windows it sets a user environment variable with `setx`. To check the key, setup then calls `GET https://api.getunbound.ai/v1/models` with it. Run the setup again and choose **Reconfigure** to replace the key, or remove the line from your shell profile to remove it.
 
 ## Fail-Open Design
 
-The plugin never blocks your workflow if the Unbound API is unreachable or the key is missing. All hooks fail open: Claude Code continues working normally, and exchanges that could not be sent are kept in `~/.unbound/logs/offline-events.jsonl`.
+The plugin never blocks your workflow if the Unbound API is unreachable or the key is missing. All hooks fail open: Claude Code continues working normally. When a key is set but the API is unreachable, exchanges that could not be sent are kept in `~/.unbound/logs/offline-events.jsonl`.
 
 ## Enterprise Deployment
 
