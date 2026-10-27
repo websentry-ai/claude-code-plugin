@@ -14,7 +14,7 @@ Inside Claude Code, run these two commands:
 
 ```
 /plugin marketplace add websentry-ai/claude-code-plugin
-/plugin install unbound@websentry-ai/claude-code-plugin
+/plugin install unbound@unbound-marketplace
 ```
 
 ### Step 2 — Run setup
@@ -41,14 +41,64 @@ After setup, every tool invocation is checked against your Unbound policies. Tes
 |---|---|
 | **Command policies** | Block or warn on dangerous tool invocations before they execute |
 | **Prompt guardrails** | DLP, NSFW, and jailbreak detection on every user prompt |
-| **Audit logging** | Streams tool usage to the Unbound dashboard in real time |
-| **Session analytics** | Sends the full conversation exchange when a session ends |
+| **Audit logging** | Records each tool call and sends it to the Unbound dashboard when Claude finishes responding |
+| **Session analytics** | Sends the conversation exchange (prompt, tool calls, response) at the end of each turn |
+
+## Data and Privacy
+
+The plugin sends data only to the Unbound API at `https://api.getunbound.ai`, and only when `UNBOUND_CLAUDE_API_KEY` is set. Every request carries the key as a Bearer token. If you set `UNBOUND_GATEWAY_URL`, requests go to that URL instead (used for self-hosted Unbound deployments).
+
+### What is sent
+
+| Hook | Endpoint | Data sent |
+|---|---|---|
+| `UserPromptSubmit` | `POST /v1/hooks/pretool` | Session ID, model name, and the text of your prompt, for the DLP / NSFW / jailbreak check |
+| `PreToolUse` | `POST /v1/hooks/pretool` | Session ID, model name, tool name, the full tool input (for example the shell command, file path, or URL), MCP server and tool name, and your latest prompt, for the policy check |
+| `PostToolUse` | none | Nothing is sent. The tool input and output are written to the local audit log |
+| `Stop` | `POST /v1/hooks/claude` | Session ID, permission mode, your prompt, each tool call in the turn with its input and output, and Claude's response (read from the session transcript) |
+
+Unbound uses this data to enforce your organization's policies and to show sessions on your Unbound dashboard. The plugin sends nothing else and contacts no other service.
+
+### What is stored on your machine
+
+| Path | Contents |
+|---|---|
+| `~/.unbound/logs/debug.jsonl` | The raw input of every hook event (prompts, tool inputs and outputs) and the timing of each API call. Not rotated; delete it at any time |
+| `~/.claude/hooks/agent-audit.log` | Prompts and tool calls of the current session, used to build the exchange sent at `Stop`. Entries are removed once sent, and the file is trimmed to the latest session when it passes 50 entries |
+| `~/.unbound/logs/offline-events.jsonl` | Exchanges that could not be sent because the API was unreachable. They are kept for inspection and are not resent automatically |
+| `~/.claude/hooks/error.log` | The last 25 API errors |
+
+### What setup changes
+
+`/unbound:setup` opens your browser at `https://gateway.getunbound.ai` so you can sign in and create a key. A one-time server on `127.0.0.1` receives the key, and the script appends `export UNBOUND_CLAUDE_API_KEY=...` to your shell profile (`~/.zprofile`, `~/.bash_profile`, `~/.zshrc`, or `~/.bashrc`). On Windows it sets a user environment variable with `setx`. Run the setup again and choose **Reconfigure** to replace the key, or remove the line from your shell profile to remove it.
 
 ## Fail-Open Design
 
-The plugin never blocks your workflow if the Unbound API is unreachable or the key is missing. All hooks fail open — Claude Code continues working normally, and queued events are replayed when connectivity resumes.
+The plugin never blocks your workflow if the Unbound API is unreachable or the key is missing. All hooks fail open: Claude Code continues working normally, and exchanges that could not be sent are kept in `~/.unbound/logs/offline-events.jsonl`.
 
 ## Enterprise Deployment
+
+### Without MDM (Claude Team and Enterprise)
+
+An Owner of your Claude organization can install the plugin for every Claude Code user and stop users from disabling it. Paste this into **Organization settings > Claude Code > Managed settings** on claude.ai:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "unbound-marketplace": {
+      "source": { "source": "github", "repo": "websentry-ai/claude-code-plugin" },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "unbound@unbound-marketplace": true
+  }
+}
+```
+
+Claude Code installs the plugin at the start of each user's next session. Each user still needs an API key: run `/unbound:setup`, or provision `UNBOUND_CLAUDE_API_KEY` on each device.
+
+### With MDM
 
 For fleet deployment where end users cannot disable the plugin, see the [enterprise deployment guide](enterprise/README.md). In short: drop a managed settings file via your MDM and provision `UNBOUND_CLAUDE_API_KEY` per device.
 
@@ -57,20 +107,14 @@ For fleet deployment where end users cannot disable the plugin, see the [enterpr
 | Variable | Description |
 |---|---|
 | `UNBOUND_CLAUDE_API_KEY` | Bearer token for the Unbound API. Get one at [app.getunbound.ai](https://app.getunbound.ai) → Settings → API Keys |
+| `UNBOUND_GATEWAY_URL` | Optional. Base URL of the Unbound API. Defaults to `https://api.getunbound.ai` |
 
-## Logs
-
-| Path | Contents |
-|---|---|
-| `~/.unbound/logs/debug.jsonl` | Raw stdin from every hook event (for debugging) |
-| `~/.claude/hooks/agent-audit.log` | Per-session audit trail |
-| `~/.unbound/logs/offline-events.jsonl` | Events that failed to send (replayed on reconnect) |
-| `~/.claude/hooks/error.log` | API errors (last 25 entries) |
+Log file locations are listed under [What is stored on your machine](#what-is-stored-on-your-machine).
 
 ## Troubleshooting
 
 **Plugin not loading**
-Run `claude plugin list` and confirm `unbound` appears. If not, re-install with `/plugin marketplace add websentry-ai/claude-code-plugin` followed by `/plugin install unbound@websentry-ai/claude-code-plugin`.
+Run `claude plugin list` and confirm `unbound` appears. If not, re-install with `/plugin marketplace add websentry-ai/claude-code-plugin` followed by `/plugin install unbound@unbound-marketplace`.
 
 **API key not set**
 Run `/unbound:setup` again — it will detect the missing key and guide you through setup. You can also set `UNBOUND_CLAUDE_API_KEY` manually in your shell profile.
@@ -79,7 +123,7 @@ Run `/unbound:setup` again — it will detect the missing key and guide you thro
 Check your policy rules at [app.getunbound.ai](https://app.getunbound.ai). The block response includes a reason — review it to confirm the rule that triggered.
 
 **Events not appearing on dashboard**
-Verify your API key is valid and the Unbound API is reachable. Check `~/.claude/hooks/error.log` for details. Offline events are stored in `~/.unbound/logs/offline-events.jsonl` and replayed automatically.
+Verify your API key is valid and the Unbound API is reachable. Check `~/.claude/hooks/error.log` for details. Exchanges that could not be sent are kept in `~/.unbound/logs/offline-events.jsonl`; they are not resent automatically.
 
 ## Support
 
