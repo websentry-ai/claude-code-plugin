@@ -1,5 +1,6 @@
 {
   "name": "unbound-marketplace",
+  "description": "Unbound Security's Claude Code plugin: policy enforcement, DLP guardrails, and session analytics.",
   "owner": {
     "name": "Unbound Security",
     "email": "support@unboundsecurity.ai"
@@ -12,7 +13,7 @@
         "source": "github",
         "repo": "websentry-ai/claude-code-plugin"
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "category": "security"
     }
   ]
